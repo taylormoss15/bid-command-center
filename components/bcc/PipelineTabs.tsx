@@ -6,7 +6,7 @@ import { useData } from "@/components/providers/DataProvider";
 import { cx } from "@/components/ui/primitives";
 import { currencyCompact } from "@/lib/bcc/format";
 import { PIPELINE_TABS } from "@/lib/bcc/stages";
-import { remainingBacklog } from "@/lib/bcc/calc";
+import { isPendingReview, remainingBacklog } from "@/lib/bcc/calc";
 import type { PipelineTab } from "@/lib/bcc/types";
 
 /**
@@ -26,7 +26,8 @@ export function PipelineTabs({
     const map = new Map<PipelineTab, { count: number; value: number }>();
     for (const tab of PIPELINE_TABS) {
       const projects = (db?.projects ?? []).filter(
-        (p) => tab.stages == null || tab.stages.includes(p.stage),
+        (p) =>
+          !isPendingReview(p) && (tab.stages == null || tab.stages.includes(p.stage)),
       );
       map.set(tab.id, {
         count: projects.length,

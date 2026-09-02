@@ -10,10 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
     "next": "14.2.35",
     "proper-lockfile": "^4.1.2",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/node": "^20",

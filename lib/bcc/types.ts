@@ -129,6 +129,22 @@ export interface ProjectOutcome {
   eligibleForRebid?: boolean;
 }
 
+/** Provenance for a project that arrived by forwarded email rather than by hand. */
+export interface Intake {
+  source: "email";
+  receivedAt: string;
+  from: string;
+  subject: string;
+  /** The original message, kept so the reviewer can check the extraction. */
+  body: string;
+  extractedBy: "claude" | "heuristic";
+  model?: string | null;
+  confidence: "high" | "medium" | "low";
+  /** What the extractor was unsure about — shown to the reviewer verbatim. */
+  uncertainties: string[];
+  reviewedAt?: string | null;
+}
+
 export interface Project {
   id: string;
   code: string; // human-facing project ID, e.g. ER-2026-041
@@ -205,6 +221,10 @@ export interface Project {
 
   contract?: Contract | null;
   outcome?: ProjectOutcome | null;
+
+  /** Set when the project came in from the inbox and has not been confirmed. */
+  intake?: Intake | null;
+  needsReview?: boolean;
 
   createdAt: string;
   updatedAt: string;

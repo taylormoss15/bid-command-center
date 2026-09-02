@@ -65,6 +65,50 @@ Log in and open **Data & backup** → **Clear all data and start real**. That em
 the demo pipeline for good — it does not come back. Then add your live projects,
 either with **New project** (⌘K, or the button top right) or by restoring a backup.
 
+## 6. Optional — forwarding emails to the board
+
+1. Add two more environment variables:
+
+   | Name | Value |
+   |---|---|
+   | `BCC_INBOUND_SECRET` | any long random string (`openssl rand -hex 32`) |
+   | `ANTHROPIC_API_KEY` | an Anthropic API key, for the model-based reader |
+
+   Without `BCC_INBOUND_SECRET` the inbound endpoint refuses every request, so
+   the feature is off until you deliberately turn it on. Without
+   `ANTHROPIC_API_KEY` it still works, using plain text matching, and labels
+   itself low confidence on every card.
+
+2. Point an inbound-email provider at:
+
+   ```
+   https://<your-app>/api/bcc/inbound?token=<BCC_INBOUND_SECRET>
+   ```
+
+   Any of these work — the endpoint recognises all of their payload shapes:
+
+   | Provider | Notes |
+   |---|---|
+   | **Cloudflare Email Routing** | Free. Route an address to a Worker that POSTs the message. |
+   | **Postmark** | Inbound stream, paid, the most reliable parsing. |
+   | **SendGrid Inbound Parse** | Free tier, needs an MX record on a subdomain. |
+   | **Mailgun Routes** | Free tier. |
+
+3. Check the wiring before you rely on it:
+
+   ```bash
+   curl "https://<your-app>/api/bcc/inbound?token=<secret>"
+   # {"status":"ready","extractor":"claude","model":"claude-opus-5"}
+   ```
+
+Then forward an invitation. It shows up under **From your inbox** on the Command
+Center — never straight onto the board.
+
+**Cost:** roughly two to three cents per email at current Opus 5 pricing. At a
+few invitations a day that is under a dollar a month. Set
+`BCC_EXTRACTION_MODEL=claude-haiku-4-5` if you would rather trade some accuracy
+for about a fifth of that.
+
 ---
 
 ## Using it week to week

@@ -79,6 +79,28 @@ selected; *Contracted* means the work can be counted as backlog.
 Everywhere: `⌘K` command bar, project side panel, one-click Trello, and CSV export of
 projects, bid recipients, activities, and organizations.
 
+### Email intake
+
+Forward a bid invitation to the address your mail provider points at
+`POST /api/bcc/inbound?token=…` and it comes back as a project card on the Command
+Center — name, GC, contact, location, bid date and time, materials, scope flags,
+square footage, and a value when the email states one.
+
+Three rules make this safe to leave switched on:
+
+- **Nothing lands on the board unreviewed.** Every arrival is a draft in *Identified*
+  with `needsReview` set. It is excluded from pipeline totals, the board, the table,
+  the follow-up queue, and GC history until you press **Add to board**.
+- **The email is data, never instructions.** It is passed to the model inside a
+  delimited block with a fixed output schema. There is nothing a forwarded message can
+  say that changes what the system does with it.
+- **It says what it is unsure about.** Every card shows a confidence level and the
+  extractor's own list of guesses, alongside the original message.
+
+Set `ANTHROPIC_API_KEY` for the model-based reader. Without one it falls back to text
+matching — good enough for dates, dollar amounts, and materials, and clearly labelled
+as such.
+
 ### Pipeline tabs
 
 **Bidding · Awarded · Contracted · Closed · All** are saved filtered views over the

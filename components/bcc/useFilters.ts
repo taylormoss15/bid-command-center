@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useOrgIndex, useRecipientIndex } from "@/components/providers/DataProvider";
-import { followUpHealth } from "@/lib/bcc/calc";
+import { followUpHealth, isPendingReview } from "@/lib/bcc/calc";
 import { parseDate } from "@/lib/bcc/format";
 import { stagesForTab } from "@/lib/bcc/stages";
 import type { BidRecipient, FollowUpHealth, PipelineTab, Project } from "@/lib/bcc/types";
@@ -95,6 +95,8 @@ export function useFilteredProjects(
     const query = filters.search.trim().toLowerCase();
 
     return projects.filter((p) => {
+      // Drafts from the inbox live in the review queue, not on the board.
+      if (isPendingReview(p)) return false;
       if (stages && !stages.includes(p.stage)) return false;
 
       const recs: BidRecipient[] = recipients.get(p.id) ?? [];

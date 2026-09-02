@@ -25,8 +25,16 @@ import { daysBetween } from "./format";
 //   contractedBacklog    signed value still to perform
 // ---------------------------------------------------------------------------
 
+/**
+ * Unconfirmed inbox arrivals are drafts. They stay out of every total, board
+ * column, and queue until someone accepts them.
+ */
+export function isPendingReview(p: Project): boolean {
+  return Boolean(p.needsReview);
+}
+
 export function isActive(p: Project): boolean {
-  return ACTIVE_STAGES.includes(p.stage);
+  return !isPendingReview(p) && ACTIVE_STAGES.includes(p.stage);
 }
 
 export function isClosed(p: Project): boolean {

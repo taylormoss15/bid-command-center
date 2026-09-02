@@ -17,7 +17,7 @@ import {
 import {
   estimatedMargin,
   isActive,
-  isClosed,
+  isPendingReview,
   remainingBacklog,
 } from "@/lib/bcc/calc";
 import { currency, currencyCompact, daysBetween, formatDate } from "@/lib/bcc/format";
@@ -52,7 +52,7 @@ export default function ClientsPage() {
         const recs = db.recipients.filter((r) => r.organizationId === org.id);
         const projects = recs
           .map((r) => db.projects.find((p) => p.id === r.projectId))
-          .filter((p): p is Project => p != null);
+          .filter((p): p is Project => p != null && !isPendingReview(p));
 
         const won = projects.filter((p) => p.stage === "contracted");
         const lost = projects.filter((p) => p.stage === "lost");

@@ -23,7 +23,7 @@ import { cx } from "@/components/ui/primitives";
 import { followUpHealth, isActive, recipientsByProject } from "@/lib/bcc/calc";
 
 const NAV = [
-  { href: "/", label: "Command Center", icon: IconGauge },
+  { href: "/", label: "Command Center", icon: IconGauge, inbox: true },
   { href: "/board", label: "Bid Board", icon: IconBoard },
   { href: "/projects", label: "Projects", icon: IconTable },
   { href: "/followups", label: "Follow-ups", icon: IconBell, badge: true },
@@ -46,6 +46,12 @@ export function AppShell({
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => setNavOpen(false), [pathname]);
+
+  /** Forwarded emails waiting to be confirmed. */
+  const inboxCount = useMemo(
+    () => (db?.projects ?? []).filter((p) => p.needsReview).length,
+    [db?.projects],
+  );
 
   /** Overdue + due-today across active work — the only number worth a badge. */
   const actionCount = useMemo(() => {
@@ -92,6 +98,14 @@ export function AppShell({
             {item.badge && actionCount > 0 ? (
               <span className="tnum rounded-full bg-volt px-1.5 py-0.5 text-[10px] font-bold leading-none text-ink">
                 {actionCount}
+              </span>
+            ) : null}
+            {item.inbox && inboxCount > 0 ? (
+              <span
+                title={`${inboxCount} forwarded ${inboxCount === 1 ? "email" : "emails"} to review`}
+                className="tnum rounded-full border border-volt/50 px-1.5 py-0.5 text-[10px] font-bold leading-none text-volt"
+              >
+                {inboxCount}
               </span>
             ) : null}
           </Link>

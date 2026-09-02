@@ -7,6 +7,7 @@ import {
   PipelineByStage,
   StaleOpportunities,
 } from "@/components/bcc/dashboard/sections";
+import { InboxReview } from "@/components/bcc/InboxReview";
 import { SummaryCards } from "@/components/bcc/dashboard/SummaryCards";
 import { useData } from "@/components/providers/DataProvider";
 import { PageBody, PageIntro } from "@/components/shell/PageBody";
@@ -32,6 +33,8 @@ export default function CommandCenterPage() {
         title={greeting(today)}
         subtitle="Everything Elite can win, what deserves a call today, and what work is actually coming."
       />
+
+      <InboxReview />
 
       <SummaryCards />
 
