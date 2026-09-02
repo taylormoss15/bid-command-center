@@ -117,8 +117,24 @@ anything you enter is lost on the next push. The **Data & backup** banner is amb
 and `/api/bcc/health` reports `"durable": false` until the store is connected.
 **Do not enter real bids before that banner turns green.**
 
-The app reads either naming convention: `KV_REST_API_URL`/`KV_REST_API_TOKEN` or
-`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`.
+**Any Redis works.** The app detects whichever credentials the provider injects:
+
+| Provider gives you | Variables read |
+|---|---|
+| Upstash, Vercel KV | `KV_REST_API_URL` + `KV_REST_API_TOKEN`, or `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` |
+| Redis Cloud, or any TCP server | `REDIS_URL` (also `KV_URL`, `STORAGE_URL`) |
+
+REST is preferred on serverless — stateless HTTP, with no connection to keep
+alive between invocations — but a `redis://` URL works too.
+
+**Leave "Custom Prefix" empty** when connecting a marketplace database. A prefix
+renames the injected variables to something the app does not look for.
+
+**Free option:** Upstash's own free tier at <https://upstash.com> is the cheapest
+route — create a Redis database there, then paste `UPSTASH_REDIS_REST_URL` and
+`UPSTASH_REDIS_REST_TOKEN` into Vercel's environment variables by hand. Vercel's
+marketplace listings start around $8/month, far more storage than this app will
+ever use.
 
 **Licence note:** Vercel's Hobby plan is for non-commercial use. Elite Roofing's
 bid board is commercial, so this path means Pro at $20/month.

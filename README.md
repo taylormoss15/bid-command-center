@@ -150,7 +150,7 @@ lib/bcc/
 
 | | When | Durable? |
 |---|---|---|
-| **kv** | `KV_REST_API_URL` / `UPSTASH_REDIS_REST_URL` is set | Yes — for serverless hosts with no disk |
+| **kv** | any Redis credentials are present — REST (`KV_REST_API_*`, `UPSTASH_REDIS_REST_*`) or TCP (`REDIS_URL`) | Yes — for serverless hosts with no disk |
 | **volume** | `BCC_DATA_DIR` is set | Yes — a mounted volume on your own server |
 | **file** | neither | Only on your own machine |
 
