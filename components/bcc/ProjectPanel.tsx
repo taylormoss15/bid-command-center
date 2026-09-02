@@ -88,6 +88,7 @@ export function ProjectPanel() {
     setEditProjectId,
     updateProject,
     deleteProject,
+    openOutcomeCapture,
     toast,
   } = useData();
   const orgs = useOrgIndex();
@@ -111,6 +112,9 @@ export function ProjectPanel() {
   const applyStage = async (stage: StageId) => {
     await updateProject(project.id, { stage });
     toast(`Moved to ${STAGE_MAP[stage].label}`);
+    if (["lost", "cancelled", "no_bid", "contracted"].includes(stage)) {
+      openOutcomeCapture({ projectId: project.id, stage });
+    }
   };
 
   const onStageChange = (stage: StageId) => {

@@ -119,6 +119,9 @@ interface DataContextValue {
   setQuickAddOpen: (open: boolean) => void;
   dataSettingsOpen: boolean;
   setDataSettingsOpen: (open: boolean) => void;
+  /** Set after a stage move that should record why, so the reason gets captured. */
+  outcomeTarget: { projectId: string; stage: StageId } | null;
+  openOutcomeCapture: (target: { projectId: string; stage: StageId } | null) => void;
   editProjectId: string | null;
   setEditProjectId: (id: string | null) => void;
 }
@@ -156,6 +159,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [logTarget, setLogTarget] = useState<DataContextValue["logTarget"]>(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [dataSettingsOpen, setDataSettingsOpen] = useState(false);
+  const [outcomeTarget, setOutcomeTarget] =
+    useState<DataContextValue["outcomeTarget"]>(null);
   const [editProjectId, setEditProjectId] = useState<string | null>(null);
 
   const toastSeq = useRef(0);
@@ -393,6 +398,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setQuickAddOpen,
       dataSettingsOpen,
       setDataSettingsOpen,
+      outcomeTarget,
+      openOutcomeCapture: setOutcomeTarget,
       editProjectId,
       setEditProjectId,
     }),
@@ -402,7 +409,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       createProject, deleteProject, updateRecipient, createRecipient,
       deleteRecipient, logFollowUp, resetData, restoreBackup, toast, toasts,
       dismissToast, openProjectId, logTarget, quickAddOpen, dataSettingsOpen,
-      editProjectId,
+      outcomeTarget, editProjectId,
     ],
   );
 

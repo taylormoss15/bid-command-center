@@ -11,6 +11,9 @@ import type { PipelineTab, Project, StageId } from "@/lib/bcc/types";
 
 import { BoardCard } from "./BoardCard";
 
+/** Moves worth asking about: why it went, or what it went for. */
+const CAPTURE_OUTCOME: StageId[] = ["lost", "cancelled", "no_bid", "contracted"];
+
 export function BidBoard({
   projects,
   tab,
@@ -18,7 +21,7 @@ export function BidBoard({
   projects: Project[];
   tab: PipelineTab;
 }) {
-  const { updateProject, toast } = useData();
+  const { updateProject, toast, openOutcomeCapture } = useData();
   const recipients = useRecipientIndex();
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<StageId | null>(null);
@@ -49,6 +52,9 @@ export function BidBoard({
       detail: project.name,
       undo: () => void updateProject(project.id, { stage: previous }),
     });
+    if (CAPTURE_OUTCOME.includes(stage)) {
+      openOutcomeCapture({ projectId: project.id, stage });
+    }
   };
 
   const onDrop = (stage: StageId, transferred?: string) => {

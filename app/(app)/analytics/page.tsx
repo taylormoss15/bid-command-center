@@ -128,11 +128,20 @@ export default function AnalyticsPage() {
     return Array.from(map.entries()).sort((a, b) => b[1].total - a[1].total);
   }, [decided, won]);
 
+  /**
+   * Group losses by the reason actually recorded rather than the bare fact of
+   * losing. The capture prompt stores "Preset — detail", so the preset is the
+   * category and everything before the dash is what we group on.
+   */
   const lossReasons = useMemo(() => {
     const map = new Map<string, { count: number; value: number }>();
     for (const p of projects) {
       if (!p.outcome || p.outcome.result === "won") continue;
-      const key = p.outcome.result === "lost" ? "Lost to a competitor" : labelOutcome(p);
+      const recorded = p.outcome.reason?.split(" — ")[0]?.trim();
+      const key =
+        p.outcome.result === "lost"
+          ? recorded || "Reason not recorded"
+          : labelOutcome(p);
       const e = map.get(key) ?? { count: 0, value: 0 };
       e.count += 1;
       e.value += p.expectedValue;
@@ -398,14 +407,32 @@ export default function AnalyticsPage() {
             )}
           </div>
           {projects
-            .filter((p) => p.outcome?.lessons)
-            .slice(0, 2)
+            .filter((p) => p.outcome?.reason || p.outcome?.lessons)
+            .sort((a, b) => (a.outcome?.date ?? "") < (b.outcome?.date ?? "") ? 1 : -1)
+            .slice(0, 4)
             .map((p) => (
               <div key={p.id} className="mt-3 rounded-lg border border-line bg-canvas p-3">
-                <p className="text-[12px] font-medium text-ink">{p.name}</p>
-                <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">
-                  {p.outcome!.lessons}
+                <p className="text-[12px] font-medium text-ink">
+                  {p.name}
+                  {p.outcome?.awardedTo ? (
+                    <span className="font-normal text-ink-muted"> · lost to {p.outcome.awardedTo}</span>
+                  ) : null}
+                  {p.outcome?.winningAmount ? (
+                    <span className="tnum font-normal text-ink-muted">
+                      {" "}· {currencyCompact(p.expectedValue - p.outcome.winningAmount)} apart
+                    </span>
+                  ) : null}
                 </p>
+                {p.outcome?.reason ? (
+                  <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">
+                    {p.outcome.reason}
+                  </p>
+                ) : null}
+                {p.outcome?.lessons ? (
+                  <p className="mt-1.5 border-l-2 border-volt pl-2 text-[12px] leading-relaxed text-ink">
+                    {p.outcome.lessons}
+                  </p>
+                ) : null}
               </div>
             ))}
         </Card>

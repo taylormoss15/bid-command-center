@@ -54,20 +54,22 @@ export interface Digest {
 }
 
 /**
- * True when there is nothing worth an email.
+ * True when there is genuinely nothing to say — an empty board, or a week with
+ * no commitments at all. Anything on the calendar earns the morning email,
+ * including the look-ahead: the daily rhythm is the point of it.
  *
- * `comingUp` deliberately does not count. A follow-up booked for Thursday
- * would otherwise generate an identical email every morning until Thursday,
- * which is how a daily digest turns into wallpaper. The look-ahead rides
- * along when the email is going out anyway.
+ * Set BCC_DIGEST_ONLY_WHEN_DUE=1 to go back to sending only when something is
+ * overdue, due today, or unscheduled.
  */
 export function isQuiet(digest: Digest): boolean {
-  return (
-    digest.overdue.length === 0 &&
-    digest.dueToday.length === 0 &&
-    digest.unscheduled.length === 0 &&
-    digest.bidsDueSoon.length === 0
-  );
+  const urgent =
+    digest.overdue.length > 0 ||
+    digest.dueToday.length > 0 ||
+    digest.unscheduled.length > 0;
+
+  if (process.env.BCC_DIGEST_ONLY_WHEN_DUE === "1") return !urgent;
+
+  return !urgent && digest.comingUp.length === 0 && digest.bidsDueSoon.length === 0;
 }
 
 export function buildDigest(db: Database, today: string): Digest {
