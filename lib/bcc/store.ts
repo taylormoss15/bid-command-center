@@ -3,8 +3,9 @@ import os from "os";
 import path from "path";
 import lockfile from "proper-lockfile";
 
+import type { Workspace } from "./auth";
 import { kvAcquire, kvConfigured, kvDelete, kvGet, kvSet } from "./kv";
-import { buildSeed } from "./seed";
+import { buildDemoSeed } from "./demo-seed";
 import type { Database } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -58,11 +59,24 @@ async function dataDir(): Promise<string> {
   return resolvedDir;
 }
 
-async function dbFile(): Promise<string> {
-  return path.join(await dataDir(), "db.json");
+async function dbFile(ws: Workspace): Promise<string> {
+  return path.join(await dataDir(), fileName(ws));
 }
-const KV_KEY = "bcc:db:v1";
-const KV_LOCK = "bcc:db:lock";
+/**
+ * Each workspace is a separate document. The live board starts empty — it is
+ * for real work — while the demo board seeds itself with a generated pipeline.
+ */
+function kvKey(ws: Workspace): string {
+  return ws === "demo" ? "bcc:demo:v1" : "bcc:db:v1";
+}
+
+function kvLockKey(ws: Workspace): string {
+  return ws === "demo" ? "bcc:demo:lock" : "bcc:db:lock";
+}
+
+function fileName(ws: Workspace): string {
+  return ws === "demo" ? "demo.json" : "db.json";
+}
 
 export type StorageBackend = "kv" | "volume" | "file";
 
@@ -83,9 +97,9 @@ export async function ensureStorageResolved(): Promise<void> {
 }
 
 /** Where writes actually land — surfaced in the UI so it is never a mystery. */
-export function storageLocation(): string {
+export function storageLocation(ws: Workspace = "live"): string {
   if (storageBackend() === "kv") return "hosted key-value store";
-  return path.join(resolvedDir ?? CONFIGURED_DIR, "db.json");
+  return path.join(resolvedDir ?? CONFIGURED_DIR, fileName(ws));
 }
 
 function normalize(parsed: Partial<Database> | null): Database | null {
@@ -112,23 +126,23 @@ export function emptyDb(): Database {
 
 // --- file backend ----------------------------------------------------------
 
-async function fileRead(): Promise<Database | null> {
+async function fileRead(ws: Workspace): Promise<Database | null> {
   try {
-    const raw = await fs.readFile(await dbFile(), "utf8");
+    const raw = await fs.readFile(await dbFile(ws), "utf8");
     return normalize(JSON.parse(raw) as Database);
   } catch {
     return null;
   }
 }
 
-async function fileWrite(db: Database): Promise<void> {
-  await fs.writeFile(await dbFile(), JSON.stringify(db, null, 2), "utf8");
+async function fileWrite(ws: Workspace, db: Database): Promise<void> {
+  await fs.writeFile(await dbFile(ws), JSON.stringify(db, null, 2), "utf8");
 }
 
 // --- kv backend ------------------------------------------------------------
 
-async function kvRead(): Promise<Database | null> {
-  const raw = await kvGet(KV_KEY);
+async function kvRead(ws: Workspace): Promise<Database | null> {
+  const raw = await kvGet(kvKey(ws));
   if (!raw) return null;
   try {
     return normalize(JSON.parse(raw) as Database);
@@ -137,16 +151,16 @@ async function kvRead(): Promise<Database | null> {
   }
 }
 
-async function kvWrite(db: Database): Promise<void> {
-  await kvSet(KV_KEY, JSON.stringify(db));
+async function kvWrite(ws: Workspace, db: Database): Promise<void> {
+  await kvSet(kvKey(ws), JSON.stringify(db));
 }
 
 /** Spin briefly for the write lock; a held lock expires on its own after 10s. */
-async function kvLock(): Promise<() => Promise<void>> {
+async function kvLock(ws: Workspace): Promise<() => Promise<void>> {
   for (let attempt = 0; attempt < 25; attempt += 1) {
-    if (await kvAcquire(KV_LOCK, 10)) {
+    if (await kvAcquire(kvLockKey(ws), 10)) {
       return async () => {
-        await kvDelete(KV_LOCK);
+        await kvDelete(kvLockKey(ws));
       };
     }
     await new Promise((r) => setTimeout(r, 60 + attempt * 20));
@@ -157,47 +171,59 @@ async function kvLock(): Promise<() => Promise<void>> {
 // --- public API ------------------------------------------------------------
 
 /**
- * Read the database, seeding the demo pipeline the very first time. Seeding
- * happens once per store: after that an empty database stays empty, so
- * clearing the demo data does not bring it back on the next request.
+ * Read a workspace.
+ *
+ * The live board starts empty — it is for real work, and nothing should appear
+ * in it that Taylor did not put there. The demo board seeds itself, and
+ * reseeds whenever its data was generated on an earlier day, so every demo
+ * opens on a pipeline with today's dates: things due today, bids closing this
+ * week, installs running out across the next year.
  */
-export async function readDb(): Promise<Database> {
+export async function readDb(ws: Workspace): Promise<Database> {
   const backend = storageBackend();
-  const existing = backend === "kv" ? await kvRead() : await fileRead();
-  if (existing) return existing;
+  const existing = backend === "kv" ? await kvRead(ws) : await fileRead(ws);
 
-  const seeded = buildSeed();
-  if (backend === "kv") await kvWrite(seeded);
-  else await fileWrite(seeded);
-  return seeded;
+  if (ws === "demo") {
+    const today = new Date().toISOString().slice(0, 10);
+    if (!existing || existing.seededAt !== today) {
+      const seeded = buildDemoSeed();
+      seeded.seededAt = today;
+      if (backend === "kv") await kvWrite(ws, seeded);
+      else await fileWrite(ws, seeded);
+      return seeded;
+    }
+    return existing;
+  }
+
+  return existing ?? emptyDb();
 }
 
 /** Read-modify-write under a lock. The mutator may return a value to pass back. */
 export async function mutate<T>(
+  ws: Workspace,
   fn: (db: Database) => T | Promise<T>,
 ): Promise<{ db: Database; result: T }> {
   const backend = storageBackend();
-  const release =
-    backend === "kv" ? await kvLock() : await fileLock();
+  const release = backend === "kv" ? await kvLock(ws) : await fileLock(ws);
 
   try {
-    const db = await readDb();
+    const db = await readDb(ws);
     const result = await fn(db);
     db.updatedAt = new Date().toISOString();
-    if (backend === "kv") await kvWrite(db);
-    else await fileWrite(db);
+    if (backend === "kv") await kvWrite(ws, db);
+    else await fileWrite(ws, db);
     return { db, result };
   } finally {
     await release();
   }
 }
 
-async function fileLock(): Promise<() => Promise<void>> {
-  const file = await dbFile();
+async function fileLock(ws: Workspace): Promise<() => Promise<void>> {
+  const file = await dbFile(ws);
   try {
     await fs.access(file);
   } catch {
-    await fileWrite(buildSeed());
+    await fileWrite(ws, emptyDb());
   }
   return lockfile.lock(file, {
     retries: { retries: 12, factor: 1.5, minTimeout: 40, maxTimeout: 1200 },
@@ -205,21 +231,25 @@ async function fileLock(): Promise<() => Promise<void>> {
   });
 }
 
-/** Replace everything: `demo` rebuilds the sample pipeline, `empty` wipes it. */
-export async function resetDb(mode: "demo" | "empty" = "demo"): Promise<Database> {
-  const next = mode === "empty" ? emptyDb() : buildSeed();
-  if (storageBackend() === "kv") await kvWrite(next);
-  else await fileWrite(next);
+/** Replace a workspace: `demo` rebuilds the sample pipeline, `empty` wipes it. */
+export async function resetDb(
+  ws: Workspace,
+  mode: "demo" | "empty" = "demo",
+): Promise<Database> {
+  const next = mode === "empty" ? emptyDb() : buildDemoSeed();
+  if (mode === "demo") next.seededAt = new Date().toISOString().slice(0, 10);
+  if (storageBackend() === "kv") await kvWrite(ws, next);
+  else await fileWrite(ws, next);
   return next;
 }
 
-/** Overwrite the store from a previously exported backup. */
-export async function restoreDb(db: Database): Promise<Database> {
+/** Overwrite a workspace from a previously exported backup. */
+export async function restoreDb(ws: Workspace, db: Database): Promise<Database> {
   const next = normalize(db);
   if (!next) throw new Error("Backup file is not a valid database");
   next.updatedAt = new Date().toISOString();
-  if (storageBackend() === "kv") await kvWrite(next);
-  else await fileWrite(next);
+  if (storageBackend() === "kv") await kvWrite(ws, next);
+  else await fileWrite(ws, next);
   return next;
 }
 

@@ -26,6 +26,7 @@ export function DataSettingsModal() {
     db,
     storage,
     storageLocation,
+    workspace,
     dataSettingsOpen,
     setDataSettingsOpen,
     resetData,
@@ -103,7 +104,9 @@ export function DataSettingsModal() {
       onClose={() => setDataSettingsOpen(false)}
       title="Data & backup"
       description={
-        db ? `${db.projects.length} projects · last write ${formatDateTime(db.updatedAt)}` : undefined
+        db
+          ? `${workspace === "demo" ? "Demo board" : "Live board"} · ${db.projects.length} projects · last write ${formatDateTime(db.updatedAt)}`
+          : undefined
       }
       width="lg"
       footer={
@@ -207,15 +210,15 @@ export function DataSettingsModal() {
 
         <section>
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-faint">
-            Start over
+            {workspace === "demo" ? "Refresh the demo" : "Start over"}
           </h3>
 
           {confirming ? (
             <div className="rounded-xl border border-danger/25 bg-danger-tint p-3.5">
               <p className="text-[13px] font-medium text-danger-ink">
                 {confirming === "empty"
-                  ? "Delete every project, GC, and logged activity?"
-                  : "Replace everything with the demo pipeline?"}
+                  ? "Delete every project, GC, and logged activity on this board?"
+                  : "Replace this board with a freshly generated demo pipeline?"}
               </p>
               <p className="mt-1 text-[12px] leading-relaxed text-danger-ink/80">
                 There is no undo. Download a backup first if there is anything here worth
@@ -240,23 +243,27 @@ export function DataSettingsModal() {
                     ? "Working…"
                     : confirming === "empty"
                       ? "Clear everything"
-                      : "Rebuild demo data"}
+                      : "Regenerate demo"}
                 </button>
               </div>
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => setConfirming("empty")}>
-                Clear all data and start real
+                {workspace === "demo" ? "Empty this demo board" : "Clear all data"}
               </Button>
-              <Button variant="ghost" onClick={() => setConfirming("demo")}>
-                Rebuild demo pipeline
-              </Button>
+              {workspace === "demo" ? (
+                <Button variant="ghost" onClick={() => setConfirming("demo")}>
+                  Regenerate demo pipeline now
+                </Button>
+              ) : null}
             </div>
           )}
+
           <p className="mt-2 text-[11.5px] leading-relaxed text-ink-muted">
-            Clearing gives you an empty board for real work — the demo pipeline will not
-            come back on its own.
+            {workspace === "demo"
+              ? "The demo regenerates itself on the first login of each day, so every walkthrough opens on current dates. Regenerate by hand here if you have been clicking around and want it clean."
+              : "This is the live board. It never seeds itself — anything here is something you put there."}
           </p>
         </section>
       </div>

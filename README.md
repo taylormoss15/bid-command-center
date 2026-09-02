@@ -46,6 +46,20 @@ docker compose up --build
 
 ---
 
+## Two boards
+
+The passcode you log in with decides which board you land on.
+
+| Passcode | Board | Contents |
+|---|---|---|
+| `BCC_PASSCODE` | **live** | Elite's real pipeline. Starts empty and never seeds itself — everything on it is something you put there. |
+| `BCC_DEMO_PASSCODE` | **demo** | A generated pipeline of ~77 projects across all 14 stages, for showing the product. Regenerates on the first login of each day so the dates are always current. |
+
+They are separate documents in storage. Nothing entered in a demo can reach the
+live board, and a demo cannot read it. Demo sessions are marked with a banner
+across the top and a `DEMO-` prefix on every export, so the two are never
+confused. Leave `BCC_DEMO_PASSCODE` unset and demo access does not exist.
+
 ## The one modelling rule
 
 A **Project** is the unique physical opportunity. A **Bid Recipient** is one proposal

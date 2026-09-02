@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { isAuthed } from "@/lib/bcc/auth";
+import { currentWorkspace } from "@/lib/bcc/auth";
 import { STAGE_MAP } from "@/lib/bcc/stages";
 import { mutate, newId } from "@/lib/bcc/store";
 import type {
@@ -35,12 +35,13 @@ interface LogPayload {
  * touch, moves the stage, updates probability, and books the next commitment.
  */
 export async function POST(request: Request) {
-  if (!isAuthed()) {
+  const ws = currentWorkspace();
+  if (!ws) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const body = (await request.json()) as LogPayload;
 
-  const { db, result } = await mutate((db) => {
+  const { db, result } = await mutate(ws, (db) => {
     const project = db.projects.find((p) => p.id === body.projectId);
     if (!project) return false;
 

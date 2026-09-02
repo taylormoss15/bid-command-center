@@ -41,7 +41,7 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { db, today, setQuickAddOpen, saveState, storage, setDataSettingsOpen } =
+  const { db, today, setQuickAddOpen, saveState, storage, workspace, setDataSettingsOpen } =
     useData();
   const [navOpen, setNavOpen] = useState(false);
 
@@ -124,7 +124,7 @@ export function AppShell({
           Bid Command Center
         </span>
         <span className="block truncate text-[11px] leading-tight text-white/40">
-          Elite Roofing
+          {workspace === "demo" ? "Demo pipeline" : "Elite Roofing"}
         </span>
       </span>
     </Link>
@@ -228,6 +228,18 @@ export function AppShell({
             </button>
           </div>
         </header>
+
+        {workspace === "demo" ? (
+          <div className="flex shrink-0 items-center justify-center gap-2 bg-volt px-4 py-1.5 text-center text-[12px] font-medium text-ink">
+            <span className="rounded bg-ink px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-volt">
+              Demo
+            </span>
+            <span>
+              Generated pipeline for demonstrations — refreshes daily. Nothing here
+              touches the live board.
+            </span>
+          </div>
+        ) : null}
 
         <main className="min-w-0 flex-1">{children}</main>
       </div>

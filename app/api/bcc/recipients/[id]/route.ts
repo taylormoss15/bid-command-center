@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { isAuthed } from "@/lib/bcc/auth";
+import { currentWorkspace } from "@/lib/bcc/auth";
 import { mutate, newId } from "@/lib/bcc/store";
 import type { BidRecipient } from "@/lib/bcc/types";
 
@@ -10,7 +10,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
 ) {
-  if (!isAuthed()) {
+  const ws = currentWorkspace();
+  if (!ws) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const patch = (await request.json()) as Partial<BidRecipient> & {
@@ -18,7 +19,7 @@ export async function PATCH(
     newRevision?: { amount: number; date: string; note?: string };
   };
 
-  const { db, result } = await mutate((db) => {
+  const { db, result } = await mutate(ws, (db) => {
     const recipient = db.recipients.find((r) => r.id === params.id);
     if (!recipient) return false;
 
@@ -69,10 +70,11 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { id: string } },
 ) {
-  if (!isAuthed()) {
+  const ws = currentWorkspace();
+  if (!ws) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const { db } = await mutate((db) => {
+  const { db } = await mutate(ws, (db) => {
     db.recipients = db.recipients.filter((r) => r.id !== params.id);
   });
   return NextResponse.json(db);

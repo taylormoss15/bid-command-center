@@ -270,4 +270,6 @@ export interface Database {
   organizations: Organization[];
   activities: Activity[];
   updatedAt: string;
+  /** Demo workspace only: the day its pipeline was generated. */
+  seededAt?: string;
 }

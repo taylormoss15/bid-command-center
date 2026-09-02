@@ -216,10 +216,15 @@ export function MultiSelect({
         />
       </button>
 
+      {/*
+        In flow rather than absolutely positioned: this control is used inside
+        scrolling panels and modals, where an absolute dropdown gets clipped by
+        the scroll container the moment it opens near the bottom.
+      */}
       {open ? (
         <div
           id={id}
-          className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-line bg-paper p-1 shadow-pop animate-pop-in"
+          className="mt-1 max-h-64 w-full overflow-auto rounded-xl border border-line bg-canvas p-1 shadow-card animate-pop-in"
           style={{ columnCount: columns }}
         >
           {options.map((o) => {

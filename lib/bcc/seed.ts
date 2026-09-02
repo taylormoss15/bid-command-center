@@ -1694,7 +1694,10 @@ export function buildSeed(now = new Date()): Database {
   return {
     projects,
     recipients,
-    organizations: ORGS,
+    // A copy: ORGS is a module constant, and callers append to what they get
+    // back. Returning the constant itself made every regeneration in the same
+    // process duplicate the whole GC list.
+    organizations: structuredClone(ORGS),
     activities,
     updatedAt: new Date().toISOString(),
   };

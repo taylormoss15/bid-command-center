@@ -1,32 +1,31 @@
 import { NextResponse } from "next/server";
 
-import { isAuthed } from "@/lib/bcc/auth";
-import {
-  readDb,
-  resetDb,
-  restoreDb,
-  storageBackend,
-  storageLocation,
-} from "@/lib/bcc/store";
+import { currentWorkspace, demoEnabled } from "@/lib/bcc/auth";
+import { readDb, resetDb, restoreDb, storageBackend, storageLocation } from "@/lib/bcc/store";
 import type { Database } from "@/lib/bcc/types";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (!isAuthed()) {
+  const ws = currentWorkspace();
+  if (!ws) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const db = await readDb();
-  // The client shows this so it is always obvious whether writes are durable.
+  const db = await readDb(ws);
+  // The client shows these so it is always obvious which board you are on and
+  // whether what you type into it is being kept.
   return NextResponse.json({
     ...db,
+    workspace: ws,
+    demoAvailable: demoEnabled(),
     storage: storageBackend(),
-    storageLocation: storageLocation(),
+    storageLocation: storageLocation(ws),
   });
 }
 
 export async function POST(request: Request) {
-  if (!isAuthed()) {
+  const ws = currentWorkspace();
+  if (!ws) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const body = (await request.json().catch(() => ({}))) as {
@@ -34,22 +33,21 @@ export async function POST(request: Request) {
     db?: Database;
   };
 
+  const respond = (db: Database) =>
+    NextResponse.json({
+      ...db,
+      workspace: ws,
+      demoAvailable: demoEnabled(),
+      storage: storageBackend(),
+      storageLocation: storageLocation(ws),
+    });
+
   if (body.action === "reset") {
-    const db = await resetDb("demo");
-    return NextResponse.json({
-    ...db,
-    storage: storageBackend(),
-    storageLocation: storageLocation(),
-  });
+    return respond(await resetDb(ws, "demo"));
   }
 
   if (body.action === "clear") {
-    const db = await resetDb("empty");
-    return NextResponse.json({
-    ...db,
-    storage: storageBackend(),
-    storageLocation: storageLocation(),
-  });
+    return respond(await resetDb(ws, "empty"));
   }
 
   if (body.action === "restore") {
@@ -59,12 +57,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const db = await restoreDb(body.db);
-    return NextResponse.json({
-    ...db,
-    storage: storageBackend(),
-    storageLocation: storageLocation(),
-  });
+    return respond(await restoreDb(ws, body.db));
   }
 
   return NextResponse.json({ error: "unknown action" }, { status: 400 });

@@ -54,9 +54,13 @@ export type SaveState = "idle" | "saving" | "saved" | "error";
 /** Which persistence backend the server is actually using. */
 export type StorageBackend = "kv" | "volume" | "file";
 
+export type Workspace = "live" | "demo";
+
 type DatabaseResponse = Database & {
   storage?: StorageBackend;
   storageLocation?: string;
+  workspace?: Workspace;
+  demoAvailable?: boolean;
 };
 
 interface Toast {
@@ -77,6 +81,8 @@ interface DataContextValue {
   /** null until the first load resolves. */
   storage: StorageBackend | null;
   storageLocation: string | null;
+  /** Which board this session is on. Demo data never touches the live one. */
+  workspace: Workspace | null;
 
   refresh: () => Promise<void>;
   updateProject: (id: string, patch: Partial<Project>, options?: { label?: string }) => Promise<void>;
@@ -143,6 +149,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [storage, setStorage] = useState<StorageBackend | null>(null);
   const [storageLocation, setStorageLocation] = useState<string | null>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
@@ -176,6 +183,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDb(next);
       if (next.storage) setStorage(next.storage);
       if (next.storageLocation) setStorageLocation(next.storageLocation);
+      if (next.workspace) setWorkspace(next.workspace);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load data");
@@ -219,6 +227,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setDb(next);
         if (next.storage) setStorage(next.storage);
         if (next.storageLocation) setStorageLocation(next.storageLocation);
+        if (next.workspace) setWorkspace(next.workspace);
         markSaved();
         return next;
       } catch (err) {
@@ -362,6 +371,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       saveState,
       storage,
       storageLocation,
+      workspace,
       refresh,
       updateProject,
       createProject,
@@ -387,7 +397,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setEditProjectId,
     }),
     [
-      db, loading, error, today, saveState, storage, storageLocation, refresh, updateProject,
+      db, loading, error, today, saveState, storage, storageLocation, workspace,
+      refresh, updateProject,
       createProject, deleteProject, updateRecipient, createRecipient,
       deleteRecipient, logFollowUp, resetData, restoreBackup, toast, toasts,
       dismissToast, openProjectId, logTarget, quickAddOpen, dataSettingsOpen,

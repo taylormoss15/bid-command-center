@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { isAuthed } from "@/lib/bcc/auth";
+import { currentWorkspace } from "@/lib/bcc/auth";
 import { mutate, newId } from "@/lib/bcc/store";
 import type { Activity, BidRecipient, Project } from "@/lib/bcc/types";
 
@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 
 /** Create a project, optionally with its first GC recipient in the same call. */
 export async function POST(request: Request) {
-  if (!isAuthed()) {
+  const ws = currentWorkspace();
+  if (!ws) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const body = (await request.json()) as {
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     recipient?: Partial<BidRecipient> & { organizationName?: string };
   };
 
-  const { db } = await mutate((db) => {
+  const { db } = await mutate(ws, (db) => {
     const now = new Date().toISOString();
     const year = new Date().getFullYear();
     const seq = db.projects.length + 1;

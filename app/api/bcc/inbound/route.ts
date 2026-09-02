@@ -72,7 +72,9 @@ export async function POST(request: Request) {
     });
   }
 
-  const { result: project } = await mutate((db) =>
+  // Forwarded mail is always real work, so it lands on the live board even
+  // though the endpoint authenticates with its own secret rather than a login.
+  const { result: project } = await mutate("live", (db) =>
     applyExtraction(db, email, result),
   );
 

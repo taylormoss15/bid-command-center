@@ -57,6 +57,7 @@ import {
 } from "@/lib/bcc/format";
 import { CONFIRM_STAGES, STAGES, STAGE_MAP } from "@/lib/bcc/stages";
 import {
+  FOLLOW_UP_TYPES,
   FOLLOW_UP_TYPE_MAP,
   MATERIAL_MAP,
   PROJECT_TYPES,
@@ -568,6 +569,36 @@ function RecipientsTab({
             </div>
 
             <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+              <Field label="Next follow-up" hint="Saves as soon as you pick a date.">
+                <Input
+                  type="date"
+                  value={r.nextFollowUpDate ?? ""}
+                  onChange={(e) =>
+                    void updateRecipient(r.id, {
+                      nextFollowUpDate: e.target.value || null,
+                    })
+                  }
+                  className="h-8 py-1 text-[12.5px]"
+                />
+              </Field>
+              <Field label="Follow-up type">
+                <Select
+                  value={r.nextFollowUpType ?? ""}
+                  onChange={(e) =>
+                    void updateRecipient(r.id, {
+                      nextFollowUpType: (e.target.value || null) as never,
+                    })
+                  }
+                  className="h-8 py-1 text-[12.5px]"
+                >
+                  <option value="">Not set</option>
+                  {FOLLOW_UP_TYPES.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
               <Field label="Recipient status">
                 <Input
                   defaultValue={r.status ?? ""}

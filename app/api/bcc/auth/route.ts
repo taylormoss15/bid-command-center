@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import {
   COOKIE_OPTIONS,
   SESSION_COOKIE,
-  checkPasscode,
   issueToken,
+  workspaceForPasscode,
 } from "@/lib/bcc/auth";
 
 export const dynamic = "force-dynamic";
@@ -21,13 +21,14 @@ export async function POST(request: Request) {
     return res;
   }
 
-  if (!checkPasscode(body.passcode ?? "")) {
+  const workspace = workspaceForPasscode(body.passcode ?? "");
+  if (!workspace) {
     // Constant-ish delay so a wrong passcode isn't obviously faster.
     await new Promise((r) => setTimeout(r, 350));
     return NextResponse.json({ error: "Incorrect passcode" }, { status: 401 });
   }
 
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(SESSION_COOKIE, issueToken(), COOKIE_OPTIONS);
+  const res = NextResponse.json({ ok: true, workspace });
+  res.cookies.set(SESSION_COOKIE, issueToken(workspace), COOKIE_OPTIONS);
   return res;
 }

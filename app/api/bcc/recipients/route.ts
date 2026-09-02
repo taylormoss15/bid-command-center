@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { isAuthed } from "@/lib/bcc/auth";
+import { currentWorkspace } from "@/lib/bcc/auth";
 import { mutate, newId } from "@/lib/bcc/store";
 import type { BidRecipient } from "@/lib/bcc/types";
 
@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 
 /** Add a GC to an existing project — a new bid path, not a new project. */
 export async function POST(request: Request) {
-  if (!isAuthed()) {
+  const ws = currentWorkspace();
+  if (!ws) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const body = (await request.json()) as Partial<BidRecipient> & {
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "projectId required" }, { status: 400 });
   }
 
-  const { db } = await mutate((db) => {
+  const { db } = await mutate(ws, (db) => {
     let orgId = body.organizationId;
     if (!orgId && body.organizationName) {
       const name = body.organizationName.trim();

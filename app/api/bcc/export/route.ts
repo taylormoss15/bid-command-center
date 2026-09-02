@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { isAuthed } from "@/lib/bcc/auth";
+import { currentWorkspace } from "@/lib/bcc/auth";
 import {
   currentContractValue,
   estimatedGrossProfit,
@@ -40,11 +40,12 @@ function csv(rows: Cell[][]): string {
 
 /** Full-fidelity CSV export — no vendor lock-in, everything leaves in one click. */
 export async function GET(request: Request) {
-  if (!isAuthed()) {
+  const ws = currentWorkspace();
+  if (!ws) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const entity = new URL(request.url).searchParams.get("entity") ?? "projects";
-  const db = await readDb();
+  const db = await readDb(ws);
   const today = todayISO();
   const orgName = (id: string) =>
     db.organizations.find((o) => o.id === id)?.name ?? "";
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
     return new NextResponse(JSON.stringify(db, null, 2), {
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Content-Disposition": `attachment; filename="elite-bid-backup-${today}.json"`,
+        "Content-Disposition": `attachment; filename="elite-${ws === "demo" ? "DEMO-" : ""}bid-backup-${today}.json"`,
       },
     });
   }
@@ -161,7 +162,7 @@ export async function GET(request: Request) {
   return new NextResponse(`﻿${csv(rows)}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="elite-${filename}-${today}.csv"`,
+      "Content-Disposition": `attachment; filename="elite-${ws === "demo" ? "DEMO-" : ""}${filename}-${today}.csv"`,
     },
   });
 }
