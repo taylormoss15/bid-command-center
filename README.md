@@ -33,8 +33,16 @@ cp .env.example .env.local
 
 Other scripts: `npm run build`, `npm run lint`, `npm run typecheck`.
 
-**Putting it on the web:** see [DEPLOY.md](./DEPLOY.md). Ten minutes to a private
-URL with a passcode and permanent storage.
+**Putting it on the web:** see [DEPLOY.md](./DEPLOY.md) — Coolify (recommended,
+with a mounted volume) or Vercel (with a KV store). Both end at a private URL with
+a passcode and permanent storage.
+
+With Docker:
+
+```bash
+export BCC_PASSCODE=... BCC_SESSION_SECRET=...
+docker compose up --build
+```
 
 ---
 
@@ -142,12 +150,14 @@ lib/bcc/
 
 | | When | Durable? |
 |---|---|---|
-| **KV** | `KV_REST_API_URL` / `UPSTASH_REDIS_REST_URL` is set | Yes — this is what production uses |
-| **file** | otherwise | Only on your own machine |
+| **kv** | `KV_REST_API_URL` / `UPSTASH_REDIS_REST_URL` is set | Yes — for serverless hosts with no disk |
+| **volume** | `BCC_DATA_DIR` is set | Yes — a mounted volume on your own server |
+| **file** | neither | Only on your own machine |
 
 The app tells you which one is live: **Data & backup** in the sidebar shows a green
-banner for durable storage and an amber one otherwise, and the sidebar carries an
-amber dot while writes are not permanent. No caller reaches past `readDb` / `mutate`,
+banner for durable storage and an amber one otherwise, the sidebar carries an amber
+dot while writes are not permanent, and `GET /api/bcc/health` reports the same thing
+for your host's monitor. No caller reaches past `readDb` / `mutate`,
 so moving to Postgres means reimplementing those two functions and nothing else.
 
 **Backups.** *Data & backup* downloads the whole database as JSON and restores it in

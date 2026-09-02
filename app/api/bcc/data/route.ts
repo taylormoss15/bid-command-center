@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { isAuthed } from "@/lib/bcc/auth";
-import { readDb, resetDb, restoreDb, storageBackend } from "@/lib/bcc/store";
+import {
+  readDb,
+  resetDb,
+  restoreDb,
+  storageBackend,
+  storageLocation,
+} from "@/lib/bcc/store";
 import type { Database } from "@/lib/bcc/types";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +18,11 @@ export async function GET() {
   }
   const db = await readDb();
   // The client shows this so it is always obvious whether writes are durable.
-  return NextResponse.json({ ...db, storage: storageBackend() });
+  return NextResponse.json({
+    ...db,
+    storage: storageBackend(),
+    storageLocation: storageLocation(),
+  });
 }
 
 export async function POST(request: Request) {
@@ -26,12 +36,20 @@ export async function POST(request: Request) {
 
   if (body.action === "reset") {
     const db = await resetDb("demo");
-    return NextResponse.json({ ...db, storage: storageBackend() });
+    return NextResponse.json({
+    ...db,
+    storage: storageBackend(),
+    storageLocation: storageLocation(),
+  });
   }
 
   if (body.action === "clear") {
     const db = await resetDb("empty");
-    return NextResponse.json({ ...db, storage: storageBackend() });
+    return NextResponse.json({
+    ...db,
+    storage: storageBackend(),
+    storageLocation: storageLocation(),
+  });
   }
 
   if (body.action === "restore") {
@@ -42,7 +60,11 @@ export async function POST(request: Request) {
       );
     }
     const db = await restoreDb(body.db);
-    return NextResponse.json({ ...db, storage: storageBackend() });
+    return NextResponse.json({
+    ...db,
+    storage: storageBackend(),
+    storageLocation: storageLocation(),
+  });
   }
 
   return NextResponse.json({ error: "unknown action" }, { status: 400 });

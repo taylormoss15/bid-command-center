@@ -52,9 +52,12 @@ export interface LogFollowUpInput {
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
 /** Which persistence backend the server is actually using. */
-export type StorageBackend = "kv" | "file";
+export type StorageBackend = "kv" | "volume" | "file";
 
-type DatabaseResponse = Database & { storage?: StorageBackend };
+type DatabaseResponse = Database & {
+  storage?: StorageBackend;
+  storageLocation?: string;
+};
 
 interface Toast {
   id: number;
@@ -73,6 +76,7 @@ interface DataContextValue {
   saveState: SaveState;
   /** null until the first load resolves. */
   storage: StorageBackend | null;
+  storageLocation: string | null;
 
   refresh: () => Promise<void>;
   updateProject: (id: string, patch: Partial<Project>, options?: { label?: string }) => Promise<void>;
@@ -138,6 +142,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [today, setToday] = useState(todayISO);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [storage, setStorage] = useState<StorageBackend | null>(null);
+  const [storageLocation, setStorageLocation] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
@@ -170,6 +175,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const next = await call("/api/bcc/data");
       setDb(next);
       if (next.storage) setStorage(next.storage);
+      if (next.storageLocation) setStorageLocation(next.storageLocation);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load data");
@@ -212,6 +218,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const next = await send();
         setDb(next);
         if (next.storage) setStorage(next.storage);
+        if (next.storageLocation) setStorageLocation(next.storageLocation);
         markSaved();
         return next;
       } catch (err) {
@@ -354,6 +361,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       today,
       saveState,
       storage,
+      storageLocation,
       refresh,
       updateProject,
       createProject,
@@ -379,7 +387,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setEditProjectId,
     }),
     [
-      db, loading, error, today, saveState, storage, refresh, updateProject,
+      db, loading, error, today, saveState, storage, storageLocation, refresh, updateProject,
       createProject, deleteProject, updateRecipient, createRecipient,
       deleteRecipient, logFollowUp, resetData, restoreBackup, toast, toasts,
       dismissToast, openProjectId, logTarget, quickAddOpen, dataSettingsOpen,

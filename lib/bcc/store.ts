@@ -11,25 +11,37 @@ import type { Database } from "./types";
 // and written under a lock so two concurrent requests cannot clobber each
 // other.
 //
-// Two backends, chosen automatically:
+// Three backends, chosen automatically:
 //
-//   KV     when KV_REST_API_URL / UPSTASH_REDIS_REST_URL is set. This is what
-//          production uses — a serverless filesystem is ephemeral, so a
-//          file-backed store would silently lose work between deploys.
-//   file   otherwise. Zero setup, so `git clone && npm run dev` just works.
+//   kv      when KV_REST_API_URL / UPSTASH_REDIS_REST_URL is set. For
+//           serverless hosts (Vercel), where the filesystem is thrown away.
+//   volume  when BCC_DATA_DIR is set. For a normal server — Coolify, Docker,
+//           a VPS — where that path is a mounted volume that outlives the
+//           container. Durable, and no external service to run.
+//   file    neither. `./data` next to the source: zero setup for local work,
+//           and NOT durable if the host replaces the filesystem on deploy.
 //
 // Nothing outside this file knows which one is live, and no caller reaches
 // past `readDb` / `mutate`. Moving to Postgres later means reimplementing
 // those two functions and nothing else.
 // ---------------------------------------------------------------------------
 
-const DATA_DIR = path.join(process.cwd(), "data");
+/** Set BCC_DATA_DIR to a mounted volume when self-hosting. */
+const DATA_DIR = process.env.BCC_DATA_DIR || path.join(process.cwd(), "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 const KV_KEY = "bcc:db:v1";
 const KV_LOCK = "bcc:db:lock";
 
-export function storageBackend(): "kv" | "file" {
-  return kvConfigured() ? "kv" : "file";
+export type StorageBackend = "kv" | "volume" | "file";
+
+export function storageBackend(): StorageBackend {
+  if (kvConfigured()) return "kv";
+  return process.env.BCC_DATA_DIR ? "volume" : "file";
+}
+
+/** Where writes actually land — surfaced in the UI so it is never a mystery. */
+export function storageLocation(): string {
+  return storageBackend() === "kv" ? "hosted key-value store" : DB_FILE;
 }
 
 function normalize(parsed: Partial<Database> | null): Database | null {

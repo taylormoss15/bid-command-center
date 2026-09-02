@@ -1,0 +1,29 @@
+# Self-hosting with Docker, and the shape Coolify uses when you point it at
+# this compose file. The named volume is the important part: it is what makes
+# the pipeline survive a rebuild.
+services:
+  bid-command-center:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Required. Generate with: openssl rand -hex 32
+      BCC_PASSCODE: ${BCC_PASSCODE:?set BCC_PASSCODE}
+      BCC_SESSION_SECRET: ${BCC_SESSION_SECRET:?set BCC_SESSION_SECRET}
+      # Matches the mount below; the app reports "durable — mounted volume".
+      BCC_DATA_DIR: /data
+      # Optional — email intake.
+      BCC_INBOUND_SECRET: ${BCC_INBOUND_SECRET:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - bid-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/bcc/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  bid-data:

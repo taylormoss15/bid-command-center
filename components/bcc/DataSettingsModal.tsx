@@ -25,6 +25,7 @@ export function DataSettingsModal() {
   const {
     db,
     storage,
+    storageLocation,
     dataSettingsOpen,
     setDataSettingsOpen,
     resetData,
@@ -37,7 +38,25 @@ export function DataSettingsModal() {
 
   if (!dataSettingsOpen) return null;
 
-  const durable = storage === "kv";
+  const durable = storage === "kv" || storage === "volume";
+
+  const banner =
+    storage === "kv"
+      ? {
+          title: "Storage is durable — hosted key-value store",
+          body: "Every change is saved immediately and survives redeploys. Still worth pulling a backup now and then.",
+        }
+      : storage === "volume"
+        ? {
+            title: "Storage is durable — mounted volume",
+            body: `Writes go to ${storageLocation ?? "the configured data directory"}, which lives outside the container and survives rebuilds. Back up the volume, or download a copy here.`,
+          }
+        : storage === "file"
+          ? {
+              title: "Storage is a local file on this machine",
+              body: "Fine for local work. On a host that rebuilds the filesystem this is wiped on every deploy — set BCC_DATA_DIR to a mounted volume, or connect a KV store. See DEPLOY.md.",
+            }
+          : { title: "Checking storage…", body: "" };
 
   const onRestore = async (file: File) => {
     setPending("restore");
@@ -110,21 +129,15 @@ export function DataSettingsModal() {
           </span>
           <div className="min-w-0">
             <p className={cx("text-[13px] font-medium", durable ? "text-ok-ink" : "text-warn-ink")}>
-              {durable
-                ? "Storage is durable — writes go to the hosted key-value store"
-                : storage === "file"
-                  ? "Storage is a local file on this machine"
-                  : "Checking storage…"}
+              {banner.title}
             </p>
             <p
               className={cx(
-                "mt-0.5 text-[12px] leading-relaxed",
+                "mt-0.5 break-words text-[12px] leading-relaxed",
                 durable ? "text-ok-ink/80" : "text-warn-ink/80",
               )}
             >
-              {durable
-                ? "Every change is saved immediately and survives redeploys. Still worth pulling a backup now and then."
-                : "Fine for local work. On a serverless host this file is wiped on every deploy — connect a KV store before you put real pipeline in here. See DEPLOY.md."}
+              {banner.body}
             </p>
           </div>
         </section>
