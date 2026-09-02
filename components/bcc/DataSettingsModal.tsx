@@ -200,7 +200,7 @@ export function DataSettingsModal() {
                     };
                     if (body.status === "sent") {
                       toast("Digest sent", {
-                        detail: `${body.counts?.overdue ?? 0} overdue · ${body.counts?.dueToday ?? 0} due today · ${body.counts?.unscheduled ?? 0} unscheduled`,
+                        detail: `${body.counts?.overdue ?? 0} overdue · ${body.counts?.dueToday ?? 0} due today · ${body.counts?.unscheduled ?? 0} unscheduled · ${body.counts?.comingUp ?? 0} coming up`,
                       });
                     } else {
                       toast(body.reason ?? "Could not send the digest", { tone: "danger" });

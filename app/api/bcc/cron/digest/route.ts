@@ -57,6 +57,7 @@ async function run(request: Request, options: { force: boolean }) {
       overdue: digest.overdue.length,
       dueToday: digest.dueToday.length,
       unscheduled: digest.unscheduled.length,
+      comingUp: digest.comingUp.length,
       bidsDueSoon: digest.bidsDueSoon.length,
     },
   });

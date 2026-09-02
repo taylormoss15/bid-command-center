@@ -103,13 +103,23 @@ projects, bid recipients, activities, and organizations.
 
 ### Morning follow-up digest
 
-One email each weekday morning listing what is overdue, what is due today, what
-is active with no next action booked, and which bids close this week. Every row
-links straight to the project it is about, so the mail works as a to-do list from
-a phone rather than a report to act on later.
+One email each weekday morning:
 
-It is deliberately quiet: on a day with nothing due, nothing is sent. A daily
-email that says "nothing to do" teaches you to ignore the ones that matter.
+| Section | What it holds |
+|---|---|
+| **Overdue** | Follow-ups whose date has passed, most late first |
+| **Due today** | Booked for today |
+| **No next action** | Active bids with nothing booked at all |
+| **Coming up** | Already booked for the next 7 days — context, not a call to act |
+| **Bids closing this week** | Bid due dates inside 7 days |
+
+Every row links straight to the project it is about, so the mail works as a to-do
+list from a phone rather than a report to act on later.
+
+It is deliberately quiet: on a day with nothing overdue, due, unscheduled, or
+closing, nothing is sent — and the look-ahead alone never triggers an email, or a
+follow-up booked for Thursday would generate an identical one every morning until
+Thursday. `BCC_DIGEST_LOOKAHEAD_DAYS` changes the window (default 7).
 
 Set `RESEND_API_KEY`, `BCC_NOTIFY_EMAIL`, and `CRON_SECRET`; the schedule lives
 in `vercel.json` (weekday mornings). **Data & backup → Send me one now** proves

@@ -17,6 +17,9 @@ import type { Database, FollowUpHealth } from "../types";
 // and which bids close this week. Everything else can wait for the dashboard.
 // ---------------------------------------------------------------------------
 
+/** How far ahead the digest looks for follow-ups already booked. */
+export const LOOK_AHEAD_DAYS = Number(process.env.BCC_DIGEST_LOOKAHEAD_DAYS || 7);
+
 export interface DigestItem {
   projectId: string;
   name: string;
@@ -44,11 +47,20 @@ export interface Digest {
   overdue: DigestItem[];
   dueToday: DigestItem[];
   unscheduled: DigestItem[];
+  /** Booked for the next few days — a look-ahead, not a call to act today. */
+  comingUp: DigestItem[];
   bidsDueSoon: DigestBid[];
   totals: { activeCount: number; actionValue: number };
 }
 
-/** True when there is nothing worth an email. */
+/**
+ * True when there is nothing worth an email.
+ *
+ * `comingUp` deliberately does not count. A follow-up booked for Thursday
+ * would otherwise generate an identical email every morning until Thursday,
+ * which is how a daily digest turns into wallpaper. The look-ahead rides
+ * along when the email is going out anyway.
+ */
 export function isQuiet(digest: Digest): boolean {
   return (
     digest.overdue.length === 0 &&
@@ -66,6 +78,7 @@ export function buildDigest(db: Database, today: string): Digest {
   const overdue: DigestItem[] = [];
   const dueToday: DigestItem[] = [];
   const unscheduled: DigestItem[] = [];
+  const comingUp: DigestItem[] = [];
   const bidsDueSoon: DigestBid[] = [];
 
   const active = db.projects.filter((p) => isActive(p) && !p.needsReview);
@@ -94,6 +107,10 @@ export function buildDigest(db: Database, today: string): Digest {
     if (health === "overdue") overdue.push(item);
     else if (health === "due_today") dueToday.push(item);
     else if (health === "unscheduled") unscheduled.push(item);
+    else if (next?.date) {
+      const away = daysBetween(today, next.date);
+      if (away != null && away > 0 && away <= LOOK_AHEAD_DAYS) comingUp.push(item);
+    }
 
     const daysAway = daysBetween(today, project.bidDueDate);
     if (daysAway != null && daysAway >= 0 && daysAway <= 7) {
@@ -114,6 +131,7 @@ export function buildDigest(db: Database, today: string): Digest {
   overdue.sort(order);
   dueToday.sort((a, b) => b.value - a.value);
   unscheduled.sort((a, b) => b.value - a.value);
+  comingUp.sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? "") || b.value - a.value);
   bidsDueSoon.sort((a, b) => a.daysAway - b.daysAway || b.value - a.value);
 
   return {
@@ -121,6 +139,7 @@ export function buildDigest(db: Database, today: string): Digest {
     overdue,
     dueToday,
     unscheduled,
+    comingUp,
     bidsDueSoon,
     totals: {
       activeCount: active.length,
