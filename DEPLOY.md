@@ -180,6 +180,40 @@ of that.
 
 ---
 
+# Path D — the morning digest (optional, either path)
+
+One email each weekday listing what needs a call, with a link per project.
+
+1. Sign up at <https://resend.com> (free tier is ample) and create an API key.
+   Sending from your own domain needs a DNS record; until then the digest can go
+   out from Resend's shared `onboarding@resend.dev` sender.
+
+2. Add these environment variables:
+
+   | Name | Value |
+   |---|---|
+   | `RESEND_API_KEY` | from Resend |
+   | `BCC_NOTIFY_EMAIL` | where the digest goes — comma-separate for several |
+   | `BCC_NOTIFY_FROM` | *optional* — `Bid Command Center <bids@yourdomain.com>` |
+   | `CRON_SECRET` | any long random string; the scheduler presents it |
+
+   Without `CRON_SECRET` the scheduled endpoint refuses to run — it will not sit
+   there unauthenticated and able to send mail.
+
+3. On Vercel the schedule is already declared in `vercel.json`
+   (`0 13 * * 1-5` — 7am Mountain in summer, 6am in winter; Vercel Cron runs on
+   UTC and does not follow daylight saving). Redeploy and it registers itself.
+   Self-hosting instead? Point any scheduler at:
+
+   ```bash
+   curl -H "Authorization: Bearer $CRON_SECRET" https://<your-app>/api/bcc/cron/digest
+   ```
+
+4. Prove it now rather than waiting for tomorrow: **Data & backup → Send me one
+   now**. That forces a send even on a quiet day and reports what it found.
+
+---
+
 # Running it locally
 
 ```bash

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { DataProvider } from "@/components/providers/DataProvider";
@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/Toaster";
 
 import { AppShell } from "./AppShell";
 import { CommandBar } from "./CommandBar";
+import { DeepLink } from "./DeepLink";
 
 export function AppFrame({ children }: { children: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
@@ -30,6 +31,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <CommandBar open={commandOpen} onClose={() => setCommandOpen(false)} />
       <GlobalOverlays />
       <Toaster />
+      <Suspense fallback={null}>
+        <DeepLink />
+      </Suspense>
     </DataProvider>
   );
 }

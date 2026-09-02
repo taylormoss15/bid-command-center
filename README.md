@@ -101,6 +101,20 @@ selected; *Contracted* means the work can be counted as backlog.
 Everywhere: `⌘K` command bar, project side panel, one-click Trello, and CSV export of
 projects, bid recipients, activities, and organizations.
 
+### Morning follow-up digest
+
+One email each weekday morning listing what is overdue, what is due today, what
+is active with no next action booked, and which bids close this week. Every row
+links straight to the project it is about, so the mail works as a to-do list from
+a phone rather than a report to act on later.
+
+It is deliberately quiet: on a day with nothing due, nothing is sent. A daily
+email that says "nothing to do" teaches you to ignore the ones that matter.
+
+Set `RESEND_API_KEY`, `BCC_NOTIFY_EMAIL`, and `CRON_SECRET`; the schedule lives
+in `vercel.json` (weekday mornings). **Data & backup → Send me one now** proves
+the wiring without waiting until tomorrow.
+
 ### Email intake
 
 Forward a bid invitation to the address your mail provider points at

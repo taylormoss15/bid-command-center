@@ -33,7 +33,7 @@ export function DataSettingsModal() {
     restoreBackup,
     toast,
   } = useData();
-  const [pending, setPending] = useState<null | "demo" | "empty" | "restore">(null);
+  const [pending, setPending] = useState<null | "demo" | "empty" | "restore" | "digest">(null);
   const [confirming, setConfirming] = useState<null | "demo" | "empty">(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -180,6 +180,46 @@ export function DataSettingsModal() {
             ))}
           </div>
         </section>
+
+        {workspace === "live" ? (
+          <section>
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-faint">
+              Follow-up digest
+            </h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                disabled={pending !== null}
+                onClick={async () => {
+                  setPending("digest");
+                  try {
+                    const res = await fetch("/api/bcc/cron/digest", { method: "POST" });
+                    const body = (await res.json()) as {
+                      status?: string;
+                      reason?: string;
+                      counts?: Record<string, number>;
+                    };
+                    if (body.status === "sent") {
+                      toast("Digest sent", {
+                        detail: `${body.counts?.overdue ?? 0} overdue · ${body.counts?.dueToday ?? 0} due today · ${body.counts?.unscheduled ?? 0} unscheduled`,
+                      });
+                    } else {
+                      toast(body.reason ?? "Could not send the digest", { tone: "danger" });
+                    }
+                  } catch {
+                    toast("Could not reach the mail service", { tone: "danger" });
+                  } finally {
+                    setPending(null);
+                  }
+                }}
+              >
+                {pending === "digest" ? "Sending…" : "Send me one now"}
+              </Button>
+              <p className="text-[11.5px] text-ink-muted">
+                Arrives each weekday morning when something is due.
+              </p>
+            </div>
+          </section>
+        ) : null}
 
         <section>
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-faint">
