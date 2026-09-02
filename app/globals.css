@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-feature-settings: "cv05" 1, "ss01" 1;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Financial values must never jitter as they change. */
+  .tnum,
+  table,
+  input[type="number"] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  ::selection {
+    background: #dff58a;
+    color: #0b0b0c;
+  }
+
+  :focus-visible {
+    outline: 2px solid #0b0b0c;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Quiet, thin scrollbars — the board and tables scroll a lot. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d0 transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #dcdad6;
+    border-radius: 99px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #bfbdb8;
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  /* One place to keep every interactive surface consistent. */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-paper;
+  }
+
+  .field {
+    @apply w-full rounded-lg border border-line bg-paper px-3 py-2 text-[13px] text-ink
+      placeholder:text-ink-faint transition
+      hover:border-line-strong
+      focus:border-ink focus:outline-none focus:ring-4 focus:ring-ink/5;
+  }
+
+  .label {
+    @apply mb-1.5 block text-[11px] font-medium uppercase tracking-[0.06em] text-ink-muted;
+  }
+
+  .card {
+    @apply rounded-xl2 border border-line bg-paper shadow-card;
+  }
+
+  .hairline {
+    @apply border-line;
+  }
+
+  /* Diagonal hatch marks "uncertain" install windows on the forecast. */
+  .hatch {
+    background-image: repeating-linear-gradient(
+      45deg,
+      currentColor 0 1.5px,
+      transparent 1.5px 6px
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

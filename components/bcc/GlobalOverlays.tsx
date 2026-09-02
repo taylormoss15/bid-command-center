@@ -1,0 +1,21 @@
+"use client";
+
+import { EditProjectModal } from "./EditProjectModal";
+import { LogFollowUpModal } from "./LogFollowUpModal";
+import { ProjectPanel } from "./ProjectPanel";
+import { QuickAddModal } from "./QuickAddModal";
+
+/**
+ * Every view can open the project panel, the log sheet, or quick add, so they
+ * are mounted once at the frame rather than duplicated per page.
+ */
+export function GlobalOverlays() {
+  return (
+    <>
+      <ProjectPanel />
+      <LogFollowUpModal />
+      <QuickAddModal />
+      <EditProjectModal />
+    </>
+  );
+}
