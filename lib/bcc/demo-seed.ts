@@ -108,13 +108,40 @@ const COMPETITORS = [
   "Summit Roofing Systems", "Intermountain Roofing Co.", "Beehive Commercial Roofing",
   "Wasatch Roofing Partners", "Cornerstone Roofing", "Great Basin Roofing",
 ];
-const LOSS_REASONS = [
-  "Priced above the winner on labour. Their crew rate is lower than ours and they carried no premium for the winter start.",
-  "GC went with the incumbent who had already done the adjacent building.",
-  "Owner deferred to a coating restoration instead of a full replacement.",
-  "We were second by under 2%. Worth rebidding this client.",
-  "Lost on schedule — they committed to a mobilisation date we could not hold.",
-  "Our exclusions on deck repair read as risk to the owner. Price the allowance next time.",
+/**
+ * Matches the categories the capture prompt offers, so the charts group — and
+ * each carries the gap range that category implies, so the demo is internally
+ * consistent rather than random.
+ */
+const LOSS_CATEGORIES: [string, [number, number], string[]][] = [
+  ["Price — we were high", [0.09, 0.19], [
+    "Their crew rate is lower and they carried no premium for the winter start.",
+    "We held a full allowance for deck repair; they priced it as unit rates.",
+    "Freight on the metal package put us over.",
+  ]],
+  ["Price — very close, under 5%", [0.008, 0.042], [
+    "Second by a hair. Worth rebidding this client.",
+    "Same scope, same warranty — they just sharpened their pencil.",
+  ]],
+  ["Incumbent roofer kept the work", [0.01, 0.07], [
+    "They had already done the adjacent building and the owner did not want two roofers on site.",
+    "Long-standing service agreement on the property.",
+  ]],
+  ["Schedule — could not commit to their dates", [0.005, 0.06], [
+    "They wanted a mobilisation date inside our Silver Fork window.",
+    "Owner needed dry-in three weeks earlier than we could staff.",
+  ]],
+  ["Scope or exclusions read as risk", [0.02, 0.09], [
+    "Our exclusions on deck repair read as risk to the owner.",
+    "We excluded the parapet flashing; the winner carried it.",
+  ]],
+  ["Relationship — GC went with someone they know better", [0.005, 0.05], [
+    "First time bidding this GC. No history to lean on.",
+    "Their PM has worked with the winner for years.",
+  ]],
+  ["Never got real feedback", [0.03, 0.12], [
+    "Told only that they went another direction.",
+  ]],
 ];
 const WIN_REASONS = [
   "Repeat client. They do not re-bid our work.",
@@ -260,14 +287,21 @@ export function buildDemoSeed(now = new Date()): Database {
       }
 
       if (stage === "lost") {
-        const winning = money(value * between(0.86, 0.985));
+        const [category, [gapLow, gapHigh], details] = pick(LOSS_CATEGORIES);
+        // The gap follows the reason: a job lost on relationship was priced
+        // fine, a job lost on price was not.
+        const gap = between(gapLow, gapHigh);
+        // Not every loss comes with the winner's number — that is the point of
+        // the coverage nudge in the loss analysis.
+        const winning = random() > 0.28 ? money(value / (1 + gap)) : null;
+        const awarded = pick(COMPETITORS);
         project.outcome = {
           result: "lost",
           date: d(-Math.round(between(10, 150))),
-          awardedTo: pick(COMPETITORS),
+          awardedTo: awarded,
           winningAmount: winning,
-          reason: pick(LOSS_REASONS),
-          competitor: pick(COMPETITORS),
+          reason: `${category} · ${pick(details)}`,
+          competitor: awarded,
           lessons: random() > 0.5 ? pick([
             "Get a second supplier quote before carrying premium freight.",
             "Ask for the bid tab every time — it is the only free market research we get.",

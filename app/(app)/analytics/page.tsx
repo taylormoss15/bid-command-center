@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { HBar, Legend, MonthColumns, RateBar, StatTile } from "@/components/bcc/charts";
+import { LossAnalysis } from "@/components/bcc/LossAnalysis";
 import { useData, useOrgIndex, useRecipientIndex } from "@/components/providers/DataProvider";
 import { PageBody, PageIntro } from "@/components/shell/PageBody";
 import { IconDownload } from "@/components/ui/Icons";
@@ -137,7 +138,7 @@ export default function AnalyticsPage() {
     const map = new Map<string, { count: number; value: number }>();
     for (const p of projects) {
       if (!p.outcome || p.outcome.result === "won") continue;
-      const recorded = p.outcome.reason?.split(" — ")[0]?.trim();
+      const recorded = p.outcome.reason?.split(" · ")[0]?.trim();
       const key =
         p.outcome.result === "lost"
           ? recorded || "Reason not recorded"
@@ -216,6 +217,10 @@ export default function AnalyticsPage() {
           sub={`${stale.length} ${stale.length === 1 ? "project" : "projects"} going quiet`}
           tone={stale.length > 0 ? "warn" : "default"}
         />
+      </div>
+
+      <div className="mb-4">
+        <LossAnalysis />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">

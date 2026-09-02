@@ -881,7 +881,7 @@ export function buildSeed(now = new Date()): Database {
       awardedTo: "Intermountain Roofing Co.",
       winningAmount: 1_054_000,
       reason:
-        "Priced $126,000 above the winner. Our metal panel supplier quoted a 14-week lead time and we carried premium freight to protect the schedule.",
+        "Price — we were high · Our metal panel supplier quoted a 14-week lead time and we carried premium freight to protect the schedule.",
       competitor: "Intermountain Roofing Co.",
       lessons:
         "Get a second panel quote on any job with more than 20,000 SF of standing seam. Freight assumption cost us the job, not labour.",

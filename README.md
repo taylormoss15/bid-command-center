@@ -96,10 +96,27 @@ selected; *Contracted* means the work can be counted as backlog.
 | **Follow-ups** | Queue grouped by urgency, plus a month calendar. Overdue, due today, and *unscheduled* are all first-class |
 | **Install Forecast** | Timeline of probable and contracted work with monthly roll-ups and a concurrent-project count that makes collisions obvious |
 | **Clients & GCs** | Per-GC volume, win rate by count and dollars, bid-to-award time, contacts, and full project history |
-| **Analytics** | Win rates by count, dollars, GC, project type, roofing system, and bid size; cycle times; proposals per month; loss reasons; estimated vs contracted |
+| **Analytics** | Win rates by count, dollars, GC, project type, roofing system, and bid size; cycle times; proposals per month; estimated vs contracted — and the loss analysis below |
 
 Everywhere: `⌘K` command bar, project side panel, one-click Trello, and CSV export of
 projects, bid recipients, activities, and organizations.
+
+### Why we lose
+
+Moving a bid to Lost prompts, then and there, for who won it, their number,
+the closest reason from a short list, what actually happened, and what to do
+differently. It shows the gap against our own number as you type theirs.
+
+Analytics turns that into the question worth asking — not how many we lost, but
+**by how much, and on what**:
+
+- Average gap against the winning number, and how many losses have one recorded
+- Gap by project type, by reason, and by roofing system
+- Near misses — everything lost by under 5%, which is the list worth re-reading
+
+A roofer 12% above the winner on institutional work and 3% on private reroofs
+has two different problems, and only one of them is a pricing problem. A price
+gap on a job lost to relationship means the price was never the problem at all.
 
 ### Morning follow-up digest
 

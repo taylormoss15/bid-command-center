@@ -99,7 +99,8 @@ export function OutcomeCaptureModal() {
           detail: `${currency(executed ?? project.expectedValue)} in contracted backlog.`,
         });
       } else {
-        const reason = [reasonPreset, detail.trim()].filter(Boolean).join(" — ");
+        // " · " separates category from detail; the presets contain em dashes.
+        const reason = [reasonPreset, detail.trim()].filter(Boolean).join(" · ");
         const outcome: Outcome =
           stage === "lost" ? "lost" : stage === "cancelled" ? "cancelled" : "no_bid";
         await updateProject(project.id, {
