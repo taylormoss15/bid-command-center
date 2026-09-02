@@ -1367,7 +1367,7 @@ export function buildSeed(now = new Date()): Database {
     lastContactDate: d(-3),
     nextFollowUpDate: null,
     nextFollowUpType: null,
-    waitingOn: `Structural addendum expected ${d(9)}`,
+    waitingOn: "the structural addendum from Big-D",
     signal: "positive",
   });
   activity("prj-sugarhouse", {

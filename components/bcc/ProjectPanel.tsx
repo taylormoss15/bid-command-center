@@ -385,7 +385,9 @@ function OverviewTab({
             {project.roofAreaSqFt
               ? `${project.roofAreaSqFt.toLocaleString()} SF · ${Math.round(project.roofAreaSqFt / 100).toLocaleString()} squares`
               : "—"}
-            {project.buildings ? ` · ${project.buildings} buildings` : ""}
+            {project.buildings
+              ? ` · ${project.buildings} ${project.buildings === 1 ? "building" : "buildings"}`
+              : ""}
           </Row>
           <Row label="Address">
             {[project.addressLine, project.city, project.state, project.zip]

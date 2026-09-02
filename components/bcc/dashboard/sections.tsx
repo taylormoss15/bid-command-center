@@ -137,14 +137,13 @@ export function PipelineByStage() {
             secondary={rollup.weighted}
             max={max}
             count={rollup.count}
-            highlight={stage.tab === "awarded"}
           />
         ))}
       </div>
       <div className="mt-3 flex items-center justify-between border-t border-line pt-2.5">
         <div className="flex items-center gap-3 text-[11px] text-ink-muted">
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-[3px] bg-ink/85" />
+            <span className="h-2.5 w-2.5 rounded-[3px] bg-ink/20" />
             Unique value
           </span>
           <span className="flex items-center gap-1.5">

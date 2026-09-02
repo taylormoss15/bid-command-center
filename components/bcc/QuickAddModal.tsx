@@ -68,7 +68,7 @@ export function QuickAddModal() {
       const match = gcSuggestions.find(
         (o) => o.name.toLowerCase() === gc.trim().toLowerCase(),
       );
-      await createProject(
+      const id = await createProject(
         {
           name: name.trim(),
           description: description.trim(),
@@ -91,9 +91,11 @@ export function QuickAddModal() {
           : undefined,
       );
       setQuickAddOpen(false);
-      toast("Project added", { detail: name.trim() });
-      // Land straight in the detail panel so the rest can be filled in now.
-      window.setTimeout(() => openProject(null), 0);
+      toast("Project added", {
+        detail: id ? "Opened so the rest can be filled in now." : name.trim(),
+      });
+      // Land straight in the detail panel — the remaining fields are one click away.
+      if (id) openProject(id);
     } catch {
       // handled upstream
     } finally {

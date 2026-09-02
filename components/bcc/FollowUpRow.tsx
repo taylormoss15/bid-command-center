@@ -151,7 +151,6 @@ export function FollowUpRow({
             <TrelloLink url={project.trelloUrl} compact />
             <Button
               size="xs"
-              variant="volt"
               onClick={() => openLog({ projectId: project.id, recipientId: recipient?.id })}
             >
               <IconChat size={12} />

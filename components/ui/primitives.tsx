@@ -290,14 +290,17 @@ export function Divider({ className }: { className?: string }) {
 export function TrelloLink({
   url,
   compact,
+  placeholder,
   className,
 }: {
   url?: string | null;
   compact?: boolean;
+  /** Render a dash when there is no card — useful in a table column, not on a card. */
+  placeholder?: boolean;
   className?: string;
 }) {
   if (!url) {
-    return compact ? (
+    return placeholder ? (
       <span className="text-[12px] text-ink-faint" title="No Trello card linked">
         —
       </span>

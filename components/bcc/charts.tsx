@@ -45,14 +45,14 @@ export function HBar({
         <span
           className={cx(
             "absolute inset-y-0 left-0 origin-left rounded-[5px] animate-bar-grow",
-            highlight ? "bg-volt" : "bg-ink/85",
+            highlight ? "bg-volt" : secondaryPct != null ? "bg-ink/20" : "bg-ink/85",
           )}
           style={{ width: `${pct}%` }}
         />
         {secondaryPct != null ? (
           <span
             className="absolute inset-y-0 left-0 origin-left rounded-[5px] bg-ink animate-bar-grow"
-            style={{ width: `${secondaryPct}%` }}
+            style={{ width: `${Math.max(secondary! > 0 ? 1.5 : 0, secondaryPct)}%` }}
             title="Probability-weighted"
           />
         ) : null}

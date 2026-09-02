@@ -19,6 +19,7 @@ import {
   IconTimeline,
   IconX,
 } from "@/components/ui/Icons";
+import { ConfirmDialog } from "@/components/ui/Overlay";
 import { cx } from "@/components/ui/primitives";
 import { followUpHealth, isActive, recipientsByProject } from "@/lib/bcc/calc";
 
@@ -41,8 +42,9 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { db, today, setQuickAddOpen, saveState } = useData();
+  const { db, today, setQuickAddOpen, saveState, resetDemoData, toast } = useData();
   const [navOpen, setNavOpen] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => setNavOpen(false), [pathname]);
 
@@ -128,6 +130,13 @@ export function AppShell({
       >
         Sign out
       </button>
+      <button
+        type="button"
+        onClick={() => setConfirmReset(true)}
+        className="w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] text-white/30 transition hover:bg-white/[0.05] hover:text-white/60"
+      >
+        Reset demo data
+      </button>
     </div>
   );
 
@@ -203,6 +212,27 @@ export function AppShell({
 
         <main className="min-w-0 flex-1">{children}</main>
       </div>
+
+      <ConfirmDialog
+        open={confirmReset}
+        title="Reset to the demo pipeline?"
+        confirmLabel="Reset everything"
+        tone="danger"
+        onCancel={() => setConfirmReset(false)}
+        onConfirm={async () => {
+          setConfirmReset(false);
+          await resetDemoData();
+          toast("Demo pipeline rebuilt", {
+            detail: "Dates regenerated against today.",
+          });
+        }}
+      >
+        <p className="text-[13px] leading-relaxed text-ink-soft">
+          Every project, bid recipient, and logged activity is replaced with the seeded
+          demo pipeline, generated fresh against today&apos;s date. Export first if this
+          store holds real work — there is no undo.
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }

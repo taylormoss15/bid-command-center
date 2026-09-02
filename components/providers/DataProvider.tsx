@@ -69,10 +69,11 @@ interface DataContextValue {
 
   refresh: () => Promise<void>;
   updateProject: (id: string, patch: Partial<Project>, options?: { label?: string }) => Promise<void>;
+  /** Resolves with the new project's id so callers can open it straight away. */
   createProject: (
     project: Partial<Project>,
     recipient?: Partial<BidRecipient> & { organizationName?: string },
-  ) => Promise<void>;
+  ) => Promise<string | null>;
   deleteProject: (id: string) => Promise<void>;
   updateRecipient: (
     id: string,
@@ -187,7 +188,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   /** Apply an optimistic local change, then send it. Rolls back on failure. */
   const commit = useCallback(
-    async (optimistic: ((current: Database) => Database) | null, send: () => Promise<Database>) => {
+    async (
+      optimistic: ((current: Database) => Database) | null,
+      send: () => Promise<Database>,
+    ): Promise<Database> => {
       const snapshot = db;
       if (optimistic && snapshot) setDb(optimistic(structuredClone(snapshot)));
       setSaveState("saving");
@@ -195,6 +199,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const next = await send();
         setDb(next);
         markSaved();
+        return next;
       } catch (err) {
         if (snapshot) setDb(snapshot);
         setSaveState("error");
@@ -225,14 +230,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const createProject = useCallback<DataContextValue["createProject"]>(
     async (project, recipient) => {
-      await commit(null, () =>
+      const before = new Set((db?.projects ?? []).map((p) => p.id));
+      const next = await commit(null, () =>
         call("/api/bcc/projects", {
           method: "POST",
           body: JSON.stringify({ project, recipient }),
         }),
       );
+      return next.projects.find((p) => !before.has(p.id))?.id ?? null;
     },
-    [commit],
+    [commit, db?.projects],
   );
 
   const deleteProject = useCallback<DataContextValue["deleteProject"]>(
