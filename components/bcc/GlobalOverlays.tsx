@@ -1,5 +1,6 @@
 "use client";
 
+import { DataSettingsModal } from "./DataSettingsModal";
 import { EditProjectModal } from "./EditProjectModal";
 import { LogFollowUpModal } from "./LogFollowUpModal";
 import { ProjectPanel } from "./ProjectPanel";
@@ -16,6 +17,7 @@ export function GlobalOverlays() {
       <LogFollowUpModal />
       <QuickAddModal />
       <EditProjectModal />
+      <DataSettingsModal />
     </>
   );
 }

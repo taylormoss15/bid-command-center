@@ -33,6 +33,9 @@ cp .env.example .env.local
 
 Other scripts: `npm run build`, `npm run lint`, `npm run typecheck`.
 
+**Putting it on the web:** see [DEPLOY.md](./DEPLOY.md). Ten minutes to a private
+URL with a passcode and permanent storage.
+
 ---
 
 ## The one modelling rule
@@ -112,19 +115,25 @@ lib/bcc/
   seed.ts                the demo pipeline
 ```
 
-**Persistence** is a single JSON document guarded by an advisory lock
-(`lib/bcc/store.ts`). It is deliberately boring: the dataset is small, it reads in one
-shot, and it exports cleanly. No caller reaches past `readDb` / `mutate`, so moving to
-Postgres or Supabase means reimplementing those two functions and nothing else.
+**Persistence** is a single JSON document, read in one shot and written under a lock
+(`lib/bcc/store.ts`). Two backends, chosen automatically:
+
+| | When | Durable? |
+|---|---|---|
+| **KV** | `KV_REST_API_URL` / `UPSTASH_REDIS_REST_URL` is set | Yes — this is what production uses |
+| **file** | otherwise | Only on your own machine |
+
+The app tells you which one is live: **Data & backup** in the sidebar shows a green
+banner for durable storage and an amber one otherwise, and the sidebar carries an
+amber dot while writes are not permanent. No caller reaches past `readDb` / `mutate`,
+so moving to Postgres means reimplementing those two functions and nothing else.
+
+**Backups.** *Data & backup* downloads the whole database as JSON and restores it in
+one click — the CSV exports are for spreadsheets, not for restoring. The same panel
+clears the demo pipeline for good when you are ready to put real work in.
 
 **State** is one client-side store (`DataProvider`). Every mutation returns the new
 database; stage drags apply optimistically and roll back if the write fails.
-
-### Notes on deployment
-
-`data/db.json` is local runtime state and is gitignored. On a serverless host with an
-ephemeral filesystem it will not survive between deploys — point `store.ts` at a real
-database before this holds work you care about.
 
 ### Deliberate departures from the spec
 

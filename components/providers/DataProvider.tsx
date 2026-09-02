@@ -51,6 +51,11 @@ export interface LogFollowUpInput {
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
+/** Which persistence backend the server is actually using. */
+export type StorageBackend = "kv" | "file";
+
+type DatabaseResponse = Database & { storage?: StorageBackend };
+
 interface Toast {
   id: number;
   message: string;
@@ -66,6 +71,8 @@ interface DataContextValue {
   error: string | null;
   today: string;
   saveState: SaveState;
+  /** null until the first load resolves. */
+  storage: StorageBackend | null;
 
   refresh: () => Promise<void>;
   updateProject: (id: string, patch: Partial<Project>, options?: { label?: string }) => Promise<void>;
@@ -86,7 +93,8 @@ interface DataContextValue {
   ) => Promise<void>;
   deleteRecipient: (id: string) => Promise<void>;
   logFollowUp: (input: LogFollowUpInput) => Promise<void>;
-  resetDemoData: () => Promise<void>;
+  resetData: (mode: "demo" | "empty") => Promise<void>;
+  restoreBackup: (db: Database) => Promise<void>;
 
   toast: (message: string, options?: { detail?: string; tone?: Toast["tone"]; undo?: () => void }) => void;
   toasts: Toast[];
@@ -99,13 +107,15 @@ interface DataContextValue {
   openLog: (target: { projectId: string; recipientId?: string | null } | null) => void;
   quickAddOpen: boolean;
   setQuickAddOpen: (open: boolean) => void;
+  dataSettingsOpen: boolean;
+  setDataSettingsOpen: (open: boolean) => void;
   editProjectId: string | null;
   setEditProjectId: (id: string | null) => void;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
 
-async function call(path: string, init?: RequestInit): Promise<Database> {
+async function call(path: string, init?: RequestInit): Promise<DatabaseResponse> {
   const res = await fetch(path, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
@@ -118,7 +128,7 @@ async function call(path: string, init?: RequestInit): Promise<Database> {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? `Request failed (${res.status})`);
   }
-  return (await res.json()) as Database;
+  return (await res.json()) as DatabaseResponse;
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
@@ -127,11 +137,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [today, setToday] = useState(todayISO);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [storage, setStorage] = useState<StorageBackend | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
   const [logTarget, setLogTarget] = useState<DataContextValue["logTarget"]>(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [dataSettingsOpen, setDataSettingsOpen] = useState(false);
   const [editProjectId, setEditProjectId] = useState<string | null>(null);
 
   const toastSeq = useRef(0);
@@ -157,6 +169,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const next = await call("/api/bcc/data");
       setDb(next);
+      if (next.storage) setStorage(next.storage);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load data");
@@ -190,14 +203,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const commit = useCallback(
     async (
       optimistic: ((current: Database) => Database) | null,
-      send: () => Promise<Database>,
-    ): Promise<Database> => {
+      send: () => Promise<DatabaseResponse>,
+    ): Promise<DatabaseResponse> => {
       const snapshot = db;
       if (optimistic && snapshot) setDb(optimistic(structuredClone(snapshot)));
       setSaveState("saving");
       try {
         const next = await send();
         setDb(next);
+        if (next.storage) setStorage(next.storage);
         markSaved();
         return next;
       } catch (err) {
@@ -308,11 +322,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [commit],
   );
 
-  const resetDemoData = useCallback(async () => {
-    await commit(null, () =>
-      call("/api/bcc/data", { method: "POST", body: JSON.stringify({ action: "reset" }) }),
-    );
-  }, [commit]);
+  const resetData = useCallback<DataContextValue["resetData"]>(
+    async (mode) => {
+      await commit(null, () =>
+        call("/api/bcc/data", {
+          method: "POST",
+          body: JSON.stringify({ action: mode === "empty" ? "clear" : "reset" }),
+        }),
+      );
+    },
+    [commit],
+  );
+
+  const restoreBackup = useCallback<DataContextValue["restoreBackup"]>(
+    async (backup) => {
+      await commit(null, () =>
+        call("/api/bcc/data", {
+          method: "POST",
+          body: JSON.stringify({ action: "restore", db: backup }),
+        }),
+      );
+    },
+    [commit],
+  );
 
   const value = useMemo<DataContextValue>(
     () => ({
@@ -321,6 +353,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       error,
       today,
       saveState,
+      storage,
       refresh,
       updateProject,
       createProject,
@@ -329,7 +362,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       createRecipient,
       deleteRecipient,
       logFollowUp,
-      resetDemoData,
+      resetData,
+      restoreBackup,
       toast,
       toasts,
       dismissToast,
@@ -339,14 +373,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
       openLog: setLogTarget,
       quickAddOpen,
       setQuickAddOpen,
+      dataSettingsOpen,
+      setDataSettingsOpen,
       editProjectId,
       setEditProjectId,
     }),
     [
-      db, loading, error, today, saveState, refresh, updateProject, createProject,
-      deleteProject, updateRecipient, createRecipient, deleteRecipient, logFollowUp,
-      resetDemoData, toast, toasts, dismissToast, openProjectId, logTarget,
-      quickAddOpen, editProjectId,
+      db, loading, error, today, saveState, storage, refresh, updateProject,
+      createProject, deleteProject, updateRecipient, createRecipient,
+      deleteRecipient, logFollowUp, resetData, restoreBackup, toast, toasts,
+      dismissToast, openProjectId, logTarget, quickAddOpen, dataSettingsOpen,
+      editProjectId,
     ],
   );
 

@@ -51,6 +51,16 @@ export async function GET(request: Request) {
   const projectName = (id: string) =>
     db.projects.find((p) => p.id === id)?.name ?? "";
 
+  // A full-fidelity JSON backup — the one export that can be restored.
+  if (entity === "backup") {
+    return new NextResponse(JSON.stringify(db, null, 2), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Disposition": `attachment; filename="elite-bid-backup-${today}.json"`,
+      },
+    });
+  }
+
   let rows: Cell[][];
   let filename: string;
 

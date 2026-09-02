@@ -19,7 +19,6 @@ import {
   IconTimeline,
   IconX,
 } from "@/components/ui/Icons";
-import { ConfirmDialog } from "@/components/ui/Overlay";
 import { cx } from "@/components/ui/primitives";
 import { followUpHealth, isActive, recipientsByProject } from "@/lib/bcc/calc";
 
@@ -42,9 +41,9 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { db, today, setQuickAddOpen, saveState, resetDemoData, toast } = useData();
+  const { db, today, setQuickAddOpen, saveState, storage, setDataSettingsOpen } =
+    useData();
   const [navOpen, setNavOpen] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => setNavOpen(false), [pathname]);
 
@@ -132,10 +131,16 @@ export function AppShell({
       </button>
       <button
         type="button"
-        onClick={() => setConfirmReset(true)}
-        className="w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] text-white/30 transition hover:bg-white/[0.05] hover:text-white/60"
+        onClick={() => setDataSettingsOpen(true)}
+        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[12px] text-white/45 transition hover:bg-white/[0.05] hover:text-white/80"
       >
-        Reset demo data
+        Data &amp; backup
+        {storage === "file" ? (
+          <span
+            title="Local file storage — not durable on a hosted deployment"
+            className="ml-auto h-1.5 w-1.5 rounded-full bg-warn"
+          />
+        ) : null}
       </button>
     </div>
   );
@@ -213,26 +218,6 @@ export function AppShell({
         <main className="min-w-0 flex-1">{children}</main>
       </div>
 
-      <ConfirmDialog
-        open={confirmReset}
-        title="Reset to the demo pipeline?"
-        confirmLabel="Reset everything"
-        tone="danger"
-        onCancel={() => setConfirmReset(false)}
-        onConfirm={async () => {
-          setConfirmReset(false);
-          await resetDemoData();
-          toast("Demo pipeline rebuilt", {
-            detail: "Dates regenerated against today.",
-          });
-        }}
-      >
-        <p className="text-[13px] leading-relaxed text-ink-soft">
-          Every project, bid recipient, and logged activity is replaced with the seeded
-          demo pipeline, generated fresh against today&apos;s date. Export first if this
-          store holds real work — there is no undo.
-        </p>
-      </ConfirmDialog>
     </div>
   );
 }
