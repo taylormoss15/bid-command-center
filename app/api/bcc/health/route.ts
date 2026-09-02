@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { storageBackend } from "@/lib/bcc/store";
+import { ensureStorageResolved, storageBackend } from "@/lib/bcc/store";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
  * only whether the app is up and which storage mode is active — never data,
  * never configuration values.
  */
-export function GET() {
+export async function GET() {
+  await ensureStorageResolved();
   return NextResponse.json({
     status: "ok",
     storage: storageBackend(),

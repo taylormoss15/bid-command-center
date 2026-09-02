@@ -112,8 +112,10 @@ Use this if you would rather not run a server for this one app.
    `BCC_SESSION_SECRET`. Redeploy.
 
 Step 2 is not optional. Vercel's filesystem is thrown away on every deploy, so
-without the KV store the app runs in `file` mode and loses everything on the next
-push. The **Data & backup** banner will be amber until it is connected.
+without the KV store the app runs in `file` mode — it comes up and is usable, but
+anything you enter is lost on the next push. The **Data & backup** banner is amber
+and `/api/bcc/health` reports `"durable": false` until the store is connected.
+**Do not enter real bids before that banner turns green.**
 
 The app reads either naming convention: `KV_REST_API_URL`/`KV_REST_API_TOKEN` or
 `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`.

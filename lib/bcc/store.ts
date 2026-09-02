@@ -1,4 +1,5 @@
-import { promises as fs } from "fs";
+import { constants as fsConstants, promises as fs } from "fs";
+import os from "os";
 import path from "path";
 import lockfile from "proper-lockfile";
 
@@ -27,8 +28,39 @@ import type { Database } from "./types";
 // ---------------------------------------------------------------------------
 
 /** Set BCC_DATA_DIR to a mounted volume when self-hosting. */
-const DATA_DIR = process.env.BCC_DATA_DIR || path.join(process.cwd(), "data");
-const DB_FILE = path.join(DATA_DIR, "db.json");
+const CONFIGURED_DIR = process.env.BCC_DATA_DIR || path.join(process.cwd(), "data");
+
+/**
+ * A serverless host mounts the application directory read-only, so a first
+ * deploy made before the KV store is connected would 500 on every request.
+ * Fall back to the OS temp directory instead: the app comes up, stays usable,
+ * and the amber "not durable" banner tells the truth about what is happening.
+ */
+let resolvedDir: string | null = null;
+/** True once we have had to abandon the configured directory. */
+let fellBackToTemp = false;
+
+async function dataDir(): Promise<string> {
+  if (resolvedDir) return resolvedDir;
+  try {
+    await fs.mkdir(CONFIGURED_DIR, { recursive: true });
+    await fs.access(CONFIGURED_DIR, fsConstants.W_OK);
+    resolvedDir = CONFIGURED_DIR;
+  } catch {
+    resolvedDir = path.join(os.tmpdir(), "bid-command-center");
+    fellBackToTemp = true;
+    await fs.mkdir(resolvedDir, { recursive: true });
+    console.warn(
+      `bcc: ${CONFIGURED_DIR} is not writable; falling back to ${resolvedDir}. ` +
+        "Data will not survive a redeploy — connect a KV store or mount a volume.",
+    );
+  }
+  return resolvedDir;
+}
+
+async function dbFile(): Promise<string> {
+  return path.join(await dataDir(), "db.json");
+}
 const KV_KEY = "bcc:db:v1";
 const KV_LOCK = "bcc:db:lock";
 
@@ -36,12 +68,24 @@ export type StorageBackend = "kv" | "volume" | "file";
 
 export function storageBackend(): StorageBackend {
   if (kvConfigured()) return "kv";
+  // A configured volume that turned out to be unwritable is not a volume.
+  if (fellBackToTemp) return "file";
   return process.env.BCC_DATA_DIR ? "volume" : "file";
+}
+
+/**
+ * Resolve the storage directory so `storageBackend()` reports the truth.
+ * Only the health endpoint needs this — every other caller has already gone
+ * through `readDb` or `mutate`.
+ */
+export async function ensureStorageResolved(): Promise<void> {
+  if (!kvConfigured()) await dataDir();
 }
 
 /** Where writes actually land — surfaced in the UI so it is never a mystery. */
 export function storageLocation(): string {
-  return storageBackend() === "kv" ? "hosted key-value store" : DB_FILE;
+  if (storageBackend() === "kv") return "hosted key-value store";
+  return path.join(resolvedDir ?? CONFIGURED_DIR, "db.json");
 }
 
 function normalize(parsed: Partial<Database> | null): Database | null {
@@ -70,7 +114,7 @@ export function emptyDb(): Database {
 
 async function fileRead(): Promise<Database | null> {
   try {
-    const raw = await fs.readFile(DB_FILE, "utf8");
+    const raw = await fs.readFile(await dbFile(), "utf8");
     return normalize(JSON.parse(raw) as Database);
   } catch {
     return null;
@@ -78,8 +122,7 @@ async function fileRead(): Promise<Database | null> {
 }
 
 async function fileWrite(db: Database): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), "utf8");
+  await fs.writeFile(await dbFile(), JSON.stringify(db, null, 2), "utf8");
 }
 
 // --- kv backend ------------------------------------------------------------
@@ -150,13 +193,13 @@ export async function mutate<T>(
 }
 
 async function fileLock(): Promise<() => Promise<void>> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  const file = await dbFile();
   try {
-    await fs.access(DB_FILE);
+    await fs.access(file);
   } catch {
     await fileWrite(buildSeed());
   }
-  return lockfile.lock(DB_FILE, {
+  return lockfile.lock(file, {
     retries: { retries: 12, factor: 1.5, minTimeout: 40, maxTimeout: 1200 },
     stale: 10_000,
   });
