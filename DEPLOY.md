@@ -152,25 +152,37 @@ filled in, waiting for you to confirm it.
 |---|---|---|
 | `BCC_INBOUND_SECRET` | **yes** | Shared secret. Until it exists the endpoint refuses everything — it never accepts anonymous writes. |
 | `ANTHROPIC_API_KEY` | no | Reads the email properly. Without it the app falls back to plain text matching and labels every card low-confidence. |
-| `BCC_INBOUND_SENDERS` | no | Who may forward mail in, and to which board. Unset means every sender goes to the live board. |
+| `RESEND_API_KEY` | no | Sends a confirmation reply back to whoever forwarded the email. Shared with the digest. |
+| `BCC_INBOUND_SENDERS` | no | Fallback approved senders. The list normally lives in the app. |
 | `BCC_INBOUND_DEFAULT_WORKSPACE` | no | Where mail from an unrecognised sender goes. Unset means refuse it. |
 | `BCC_EXTRACTION_MODEL` | no | Defaults to `claude-opus-5`. |
 
 ## 2. Who is allowed to forward
 
-One address feeds every board, and the **From** address decides which one:
+**In the app: Data & backup → Email intake.** Type an address, press Approve
+sender. Each board keeps its own list, so setting up another account is a form
+rather than a deploy — nothing here needs an environment variable or a rebuild.
 
-```
-BCC_INBOUND_SENDERS=taylor@eliteroofing.com, s.taylormoss@gmail.com, @eliteroofing.com, sales@eliteroofing.com=demo
-```
-
-- A bare address or an `@domain`; an exact address beats a domain rule, so one
-  mailbox on a shared domain can be pointed at the demo board.
-- `=live` or `=demo` picks the board. Live if you leave it off.
+- A full address, or a whole company written as `@eliteroofing.com`.
+- An exact address beats a domain rule, so one mailbox on a shared domain can
+  be pointed at the demo board while the rest go live.
 - `+tag` suffixes are ignored, and so are dots in a Gmail address, so
   `taylor+bids@gmail.com` still matches `taylor@gmail.com`.
 - Anyone else is refused, and the refusal names the address so you know what to
   add.
+- The panel shows how many emails each entry has actually carried, so stale
+  ones are obvious.
+
+Until a board has approved anyone, **every** sender routes to the live board —
+which is what a brand new deployment needs in order to receive its first email
+at all. Approve one address and everything else starts getting refused.
+
+`BCC_INBOUND_SENDERS` still works and is checked after the stored list. Same
+format, plus `=live` or `=demo` per entry:
+
+```
+BCC_INBOUND_SENDERS=taylor@eliteroofing.com, @eliteroofing.com, sales@eliteroofing.com=demo
+```
 
 A word on what this is: a From header can be forged, so sender matching is
 **routing, not security**. `BCC_INBOUND_SECRET` is what guards the door. What
@@ -180,6 +192,17 @@ GC who found the address on a bid tab cannot quietly fill your board with junk.
 Want GCs to be able to email the address directly? Set
 `BCC_INBOUND_DEFAULT_WORKSPACE=live` and unrecognised senders land on the live
 board instead of bouncing.
+
+## 2b. The confirmation reply
+
+With `RESEND_API_KEY` set (the digest's key — there is nothing new to sign up
+for), whoever forwards an email gets a reply within seconds: what landed, the
+fields it read out of the message, anything worth checking, and a link straight
+to the project. It threads under the message you forwarded, and it goes to the
+**forwarder only** — never to the GC quoted inside.
+
+The point is that forwarding from a phone stops being an act of faith. Turn it
+off per board with the checkbox under Data & backup → Email intake.
 
 ## 3. Point a mail provider at it
 
@@ -207,8 +230,10 @@ curl "https://<your-domain>/api/bcc/inbound?token=<secret>"
   "status": "ready",
   "extractor": "claude",
   "model": "claude-opus-5",
-  "senders": ["taylor@eliteroofing.com → live", "@eliteroofing.com → live"],
+  "approvedSenders": ["taylor@eliteroofing.com → live", "@eliteroofing.com → live"],
+  "sendersFromEnvironment": "BCC_INBOUND_SENDERS is not set",
   "unrecognisedSenders": "refused",
+  "confirmationReplies": "sent from Bid Command Center <bids@yourdomain.com>",
   "demoWorkspace": "available"
 }
 ```
@@ -337,7 +362,8 @@ customer-facing that must not go down while you are on a roof on Vercel.
 | Container restarts in a loop | Health check failing. Check the app logs; the endpoint is `/api/bcc/health` and needs no auth. |
 | "Could not acquire the write lock" | Two writes collided. Retry; the lock clears itself after ten seconds. |
 | Email intake returns 401 | `BCC_INBOUND_SECRET` unset, or the `token` in the URL does not match it. |
-| Email intake returns 403 | The forwarding address is not in `BCC_INBOUND_SENDERS`. The response body names the address — add it, or set `BCC_INBOUND_DEFAULT_WORKSPACE`. |
+| Email intake returns 403 | The forwarding address is not approved. The response body names it — add it under Data & backup → Email intake, or set `BCC_INBOUND_DEFAULT_WORKSPACE`. |
+| No confirmation reply arrives | `RESEND_API_KEY` unset, the checkbox is off for that board, or the message was a duplicate (those are silent by design). The POST response says which. |
 | A forwarded email went to the wrong board | Whichever rule in `BCC_INBOUND_SENDERS` matched the From address decided it. An exact address beats an `@domain` rule. |
 | A forwarded email created a duplicate project | The name and city did not look close enough to what is on the board. Merge by hand and it will match next time. |
 

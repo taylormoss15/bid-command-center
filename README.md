@@ -150,10 +150,17 @@ contact, location, bid date and time, materials, scope flags, square footage, an
 value when the email states one.
 
 **Who sent it picks the board.** One address feeds every workspace; the From address
-decides which one, via `BCC_INBOUND_SENDERS` (an address or an `@domain`, optionally
-`=live` or `=demo`). Anyone unrecognised is refused, and the refusal names the address
-so you know what to add. A From header is forgeable, so this is routing, not security —
-`BCC_INBOUND_SECRET` is what guards the door.
+decides which one. Approved senders are managed in the app — Data & backup → Email
+intake — so standing up another account is typing an address into a box, not editing a
+deploy. A full address or a whole company (`@eliteroofing.com`), with the exact address
+winning where both match. Anyone unrecognised is refused, and the refusal names the
+address so you know what to add. A From header is forgeable, so this is routing, not
+security — `BCC_INBOUND_SECRET` is what guards the door.
+
+**And it replies.** Whoever forwarded the email gets a confirmation within seconds:
+what landed, the fields read out of the message, anything worth checking, and a link
+to the project — threaded under the message they sent, and addressed to them, never to
+the GC quoted inside. Forwarding from a phone stops being an act of faith.
 
 **What it already knows, it reuses.** The extractor is handed the GCs on file so a
 regular does not come back as a second spelling, and a GC is recognised by the email

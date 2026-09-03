@@ -2,6 +2,10 @@ import { currency, formatDate, formatDateTime } from "../format";
 import { STAGE_MAP } from "../stages";
 import type { Digest, DigestBid, DigestItem } from "./digest";
 import { projectUrl } from "./digest";
+import { DANGER, INK, LINE, MUTED, VOLT, WARN, esc, send } from "./theme";
+import type { SendResult } from "./theme";
+
+export type { SendResult } from "./theme";
 
 // ---------------------------------------------------------------------------
 // The digest email.
@@ -11,20 +15,6 @@ import { projectUrl } from "./digest";
 // can work from a phone rather than a report you have to act on later.
 // ---------------------------------------------------------------------------
 
-const INK = "#0B0B0C";
-const MUTED = "#71717A";
-const LINE = "#E9E8E5";
-const VOLT = "#C8F235";
-const DANGER = "#C0272D";
-const WARN = "#B45309";
-
-function esc(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function row(item: DigestItem, baseUrl: string, accent: string): string {
   const late =
@@ -211,22 +201,12 @@ export function renderDigestText(digest: Digest, baseUrl: string): string {
   return lines.join("\n");
 }
 
-export interface SendResult {
-  sent: boolean;
-  reason?: string;
-  id?: string;
-}
-
 /** Send through Resend. Missing configuration is reported, never thrown. */
 export async function sendDigestEmail(
   digest: Digest,
   baseUrl: string,
 ): Promise<SendResult> {
-  const key = process.env.RESEND_API_KEY;
   const to = process.env.BCC_NOTIFY_EMAIL;
-  const from = process.env.BCC_NOTIFY_FROM || "Bid Command Center <onboarding@resend.dev>";
-
-  if (!key) return { sent: false, reason: "RESEND_API_KEY is not set" };
   if (!to) return { sent: false, reason: "BCC_NOTIFY_EMAIL is not set" };
 
   const actionCount =
@@ -236,28 +216,10 @@ export async function sendDigestEmail(
       ? `Bid follow-ups — nothing due${digest.bidsDueSoon.length ? `, ${digest.bidsDueSoon.length} bids closing` : ""}`
       : `${actionCount} follow-up${actionCount === 1 ? "" : "s"} need you${digest.overdue.length ? ` — ${digest.overdue.length} overdue` : ""}`;
 
-  // Overridable so the digest can be exercised against a stand-in in tests.
-  const endpoint = `${(process.env.RESEND_API_URL || "https://api.resend.com").replace(/\/$/, "")}/emails`;
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: to.split(",").map((address) => address.trim()).filter(Boolean),
-      subject,
-      html: renderDigestHtml(digest, baseUrl),
-      text: renderDigestText(digest, baseUrl),
-    }),
+  return send({
+    to: to.split(",").map((address) => address.trim()).filter(Boolean),
+    subject,
+    html: renderDigestHtml(digest, baseUrl),
+    text: renderDigestText(digest, baseUrl),
   });
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    return { sent: false, reason: `Resend returned ${res.status}. ${detail.slice(0, 200)}` };
-  }
-  const body = (await res.json().catch(() => ({}))) as { id?: string };
-  return { sent: true, id: body.id };
 }

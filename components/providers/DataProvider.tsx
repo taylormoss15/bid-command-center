@@ -103,6 +103,11 @@ interface DataContextValue {
   ) => Promise<void>;
   deleteRecipient: (id: string) => Promise<void>;
   logFollowUp: (input: LogFollowUpInput) => Promise<void>;
+  updateSettings: (patch: {
+    addSender?: { address: string; label?: string };
+    removeSenderId?: string;
+    confirmIntake?: boolean;
+  }) => Promise<void>;
   resetData: (mode: "demo" | "empty") => Promise<void>;
   restoreBackup: (db: Database) => Promise<void>;
 
@@ -348,6 +353,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [commit],
   );
 
+  const updateSettings = useCallback<DataContextValue["updateSettings"]>(
+    async (patch) => {
+      await commit(null, () =>
+        call("/api/bcc/settings", { method: "PATCH", body: JSON.stringify(patch) }),
+      );
+    },
+    [commit],
+  );
+
   const resetData = useCallback<DataContextValue["resetData"]>(
     async (mode) => {
       await commit(null, () =>
@@ -389,6 +403,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       updateRecipient,
       createRecipient,
       deleteRecipient,
+      updateSettings,
       logFollowUp,
       resetData,
       restoreBackup,
@@ -414,7 +429,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       db, loading, error, today, saveState, storage, storageLocation, workspace,
       refresh, updateProject,
       createProject, deleteProject, updateRecipient, createRecipient,
-      deleteRecipient, logFollowUp, resetData, restoreBackup, toast, toasts,
+      deleteRecipient, updateSettings, logFollowUp, resetData, restoreBackup, toast, toasts,
       dismissToast, openProjectId, logTarget, quickAddOpen, dataSettingsOpen,
       outcomeTarget, recordBidTarget, editProjectId,
     ],

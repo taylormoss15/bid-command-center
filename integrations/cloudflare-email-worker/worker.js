@@ -45,6 +45,8 @@ export default {
       text: parsed.text,
       html: parsed.html,
       date: message.headers.get("date") || new Date().toISOString(),
+      // Lets the app's confirmation reply thread with the forward.
+      "message-id": message.headers.get("message-id") || "",
     };
 
     try {

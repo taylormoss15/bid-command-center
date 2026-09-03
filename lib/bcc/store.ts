@@ -102,6 +102,13 @@ export function storageLocation(ws: Workspace = "live"): string {
   return path.join(resolvedDir ?? CONFIGURED_DIR, fileName(ws));
 }
 
+/**
+ * Fills in anything a stored document is missing, so an older file still loads.
+ *
+ * Every optional field has to be carried through explicitly: this used to drop
+ * `seededAt`, which meant the demo board rebuilt itself on every single read
+ * rather than once a day, throwing away anything added during a walkthrough.
+ */
 function normalize(parsed: Partial<Database> | null): Database | null {
   if (!parsed) return null;
   return {
@@ -109,7 +116,9 @@ function normalize(parsed: Partial<Database> | null): Database | null {
     recipients: parsed.recipients ?? [],
     organizations: parsed.organizations ?? [],
     activities: parsed.activities ?? [],
+    settings: parsed.settings,
     updatedAt: parsed.updatedAt ?? new Date().toISOString(),
+    seededAt: parsed.seededAt,
   };
 }
 

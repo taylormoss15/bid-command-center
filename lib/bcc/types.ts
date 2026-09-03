@@ -279,11 +279,39 @@ export interface Organization {
   contacts: { name: string; title?: string; email?: string; phone?: string }[];
 }
 
+/**
+ * One address that may forward mail onto this board: a full address, or a
+ * whole domain written as "@example.com".
+ *
+ * These live in the data, not in the environment, so setting up a new account
+ * is something you do in the app rather than a deploy.
+ */
+export interface ApprovedSender {
+  id: string;
+  address: string;
+  /** Optional note — whose mailbox this is. */
+  label?: string;
+  addedAt: string;
+  lastUsedAt?: string | null;
+  /** How many emails have arrived from it. */
+  count?: number;
+}
+
+export interface WorkspaceSettings {
+  approvedSenders: ApprovedSender[];
+  /**
+   * Reply to whoever forwarded an email, confirming what landed on the board.
+   * Defaults to on wherever outbound mail is configured.
+   */
+  confirmIntake?: boolean;
+}
+
 export interface Database {
   projects: Project[];
   recipients: BidRecipient[];
   organizations: Organization[];
   activities: Activity[];
+  settings?: WorkspaceSettings;
   updatedAt: string;
   /** Demo workspace only: the day its pipeline was generated. */
   seededAt?: string;

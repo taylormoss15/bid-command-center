@@ -6,7 +6,12 @@ import { applyExtraction, intakeContext, shouldAccept } from "@/lib/bcc/intake/a
 import { extractFromEmail } from "@/lib/bcc/intake/extract";
 import { normalizeEmail } from "@/lib/bcc/intake/normalize";
 import { defaultWorkspace, routeSender, senderRules } from "@/lib/bcc/intake/routing";
+import { settingsOf, storedSenderRules, touchSender } from "@/lib/bcc/intake/senders";
+import { sendIntakeReply, type IntakeReply } from "@/lib/bcc/notify/confirm";
+import { appBaseUrl } from "@/lib/bcc/notify/theme";
 import { mutate, readDb } from "@/lib/bcc/store";
+import type { Workspace } from "@/lib/bcc/auth";
+import type { Database } from "@/lib/bcc/types";
 
 export const dynamic = "force-dynamic";
 // Extraction can take a few seconds; give it room on hosts that allow it.
@@ -41,6 +46,29 @@ function authorized(request: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/**
+ * Replies to the forwarder, if this board wants confirmations and outbound
+ * mail is configured. Never throws and never blocks the intake: a reply that
+ * could not be sent is reported in the response, not raised.
+ */
+async function confirm(
+  request: Request,
+  db: Database,
+  workspace: Workspace,
+  reply: IntakeReply,
+): Promise<string> {
+  if (settingsOf(db).confirmIntake === false) return "off for this board";
+  if (!process.env.RESEND_API_KEY) return "skipped: RESEND_API_KEY is not set";
+
+  try {
+    const result = await sendIntakeReply(reply, appBaseUrl(request));
+    return result.sent ? `sent to ${reply.to}` : `not sent: ${result.reason}`;
+  } catch (error) {
+    console.error("bcc: confirmation reply failed", error);
+    return "not sent: the mail service could not be reached";
+  }
+}
+
 export async function POST(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -70,8 +98,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // Who forwarded it decides which board it lands on.
-  const route = routeSender(email.from);
+  // Who forwarded it decides which board it lands on. Each board's own
+  // approved list is asked first; the environment is the fallback.
+  const route = routeSender(email.from, await storedSenderRules());
   if (!route.ok) {
     console.warn(`bcc: refused inbound mail from ${route.sender} — ${route.reason}`);
     return NextResponse.json(
@@ -88,21 +117,56 @@ export async function POST(request: Request) {
   if (!shouldAccept(result.extraction)) {
     // Not a bid invitation. Acknowledge so the provider stops retrying, but
     // do not put noise on the board.
+    const reply = await confirm(request, before, workspace, {
+      kind: "ignored",
+      to: route.sender,
+      subject: email.subject,
+      messageId: email.messageId,
+      extractedBy: result.extractedBy,
+    });
     return NextResponse.json({
       status: "ignored",
       reason: "This did not look like a bid invitation.",
       workspace,
       subject: email.subject,
+      confirmation: reply,
     });
   }
 
-  const { result: outcome } = await mutate(workspace, (db) =>
-    applyExtraction(db, email, result),
-  );
+  const { db: after, result: outcome } = await mutate(workspace, (db) => {
+    touchSender(db, route.sender, new Date().toISOString());
+    return applyExtraction(db, email, result);
+  });
+
+  const bidPaths = after.recipients.filter(
+    (r) => r.projectId === outcome.project.id,
+  ).length;
+
+  const confirmation =
+    outcome.kind === "duplicate"
+      ? "skipped: already confirmed"
+      : await confirm(request, after, workspace, {
+          kind: outcome.kind,
+          to: route.sender,
+          subject: email.subject,
+          messageId: email.messageId,
+          project: outcome.project,
+          gc:
+            outcome.kind === "created"
+              ? (outcome.organization?.name ?? null)
+              : outcome.kind === "recipient"
+                ? outcome.organization.name
+                : null,
+          bidPaths,
+          differences: outcome.kind === "update" ? outcome.differences : undefined,
+          uncertainties: result.extraction.uncertainties,
+          extractedBy: result.extractedBy,
+        });
 
   const common = {
     workspace,
     sender: route.sender,
+    confirmation,
     projectId: outcome.project.id,
     project: outcome.project.name,
     extractedBy: result.extractedBy,
@@ -155,18 +219,30 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const rules = senderRules();
+  const stored = await storedSenderRules();
+  const env = senderRules();
   const fallback = defaultWorkspace();
+  const describe = (rules: typeof env) => rules.map((r) => `${r.pattern} → ${r.workspace}`);
 
   return NextResponse.json({
     status: "ready",
     extractor: process.env.ANTHROPIC_API_KEY ? "claude" : "heuristic only",
     model: process.env.BCC_EXTRACTION_MODEL || "claude-opus-5",
-    senders:
-      rules.length === 0
-        ? "no rules set — every sender routes to the live board"
-        : rules.map((r) => `${r.pattern} → ${r.workspace}`),
-    unrecognisedSenders: fallback ? `routed to ${fallback}` : "refused",
+    approvedSenders:
+      stored.length === 0
+        ? "none — add them under Data & backup → Email intake"
+        : describe(stored),
+    sendersFromEnvironment:
+      env.length === 0 ? "BCC_INBOUND_SENDERS is not set" : describe(env),
+    unrecognisedSenders:
+      stored.length === 0 && env.length === 0
+        ? "routed to live — nothing is configured yet"
+        : fallback
+          ? `routed to ${fallback}`
+          : "refused",
+    confirmationReplies: process.env.RESEND_API_KEY
+      ? `sent from ${process.env.BCC_NOTIFY_FROM || "onboarding@resend.dev"}`
+      : "off — RESEND_API_KEY is not set",
     demoWorkspace: demoEnabled() ? "available" : "not configured",
   });
 }

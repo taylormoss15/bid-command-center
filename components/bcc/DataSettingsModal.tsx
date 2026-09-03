@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 
 import { useData } from "@/components/providers/DataProvider";
+import { EmailIntakeSettings } from "@/components/bcc/EmailIntakeSettings";
 import { IconAlert, IconCheck, IconDownload } from "@/components/ui/Icons";
 import { Modal } from "@/components/ui/Overlay";
 import { Button, cx } from "@/components/ui/primitives";
@@ -180,6 +181,8 @@ export function DataSettingsModal() {
             ))}
           </div>
         </section>
+
+        <EmailIntakeSettings />
 
         {workspace === "live" ? (
           <section>

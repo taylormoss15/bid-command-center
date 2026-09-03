@@ -5,20 +5,11 @@ import { currentWorkspace } from "@/lib/bcc/auth";
 import { todayISO } from "@/lib/bcc/format";
 import { buildDigest, isQuiet } from "@/lib/bcc/notify/digest";
 import { sendDigestEmail } from "@/lib/bcc/notify/email";
+import { appBaseUrl } from "@/lib/bcc/notify/theme";
 import { readDb } from "@/lib/bcc/store";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-/** Where the email's links should point. */
-function baseUrl(request: Request): string {
-  const configured = process.env.BCC_APP_URL || process.env.NEXT_PUBLIC_APP_URL;
-  if (configured) return configured.replace(/\/$/, "");
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  }
-  return new URL(request.url).origin;
-}
 
 function matchesSecret(provided: string, expected: string): boolean {
   const a = Buffer.from(provided);
@@ -47,7 +38,7 @@ async function run(request: Request, options: { force: boolean }) {
     });
   }
 
-  const result = await sendDigestEmail(digest, baseUrl(request));
+  const result = await sendDigestEmail(digest, appBaseUrl(request));
   return NextResponse.json({
     status: result.sent ? "sent" : "not-sent",
     reason: result.reason,

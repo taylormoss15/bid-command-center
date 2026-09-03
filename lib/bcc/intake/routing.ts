@@ -8,6 +8,11 @@ import type { Workspace } from "../auth";
 // the live board; a salesperson forwards one from the demo mailbox, it appears
 // on the demo board and can never touch the real pipeline.
 //
+// The approved addresses live in each board's own data, managed in the app, so
+// standing up a new account is a form rather than a deploy. BCC_INBOUND_SENDERS
+// still works and is checked after them — useful for bootstrapping, and for
+// keeping one address permanently allowed no matter what the data says.
+//
 // A word on what this is and is not. A From header is trivially forgeable, so
 // this is ROUTING, not authentication. The shared secret on the endpoint is
 // the authentication. What sender matching buys is that a mail provider
@@ -66,6 +71,23 @@ export function senderDomain(input: string): string {
   return domainOf(bareAddress(input));
 }
 
+/**
+ * Canonical stored form of one rule: a bare "@domain", or a canonical address.
+ * Returns null for anything that is not usable as either.
+ */
+export function normalizeSenderPattern(input: string): string | null {
+  const trimmed = input.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("@")) {
+    const domain = trimmed.slice(1);
+    return /^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain) ? `@${domain}` : null;
+  }
+
+  const address = canonicalAddress(trimmed);
+  return /^[^\s@]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(address) ? address : null;
+}
+
 function parseWorkspace(value: string | undefined): Workspace | null {
   const v = value?.trim().toLowerCase();
   if (v === "live" || v === "demo") return v;
@@ -90,13 +112,10 @@ export function senderRules(): SenderRule[] {
 
     const [left, right] = trimmed.split("=");
     const workspace = parseWorkspace(right) ?? "live";
-    const pattern = left.trim().toLowerCase();
+    const pattern = normalizeSenderPattern(left);
     if (!pattern) continue;
 
-    rules.push({
-      pattern: pattern.startsWith("@") ? pattern : canonicalAddress(pattern),
-      workspace,
-    });
+    rules.push({ pattern, workspace });
   }
   return rules;
 }
@@ -110,15 +129,20 @@ export function defaultWorkspace(): Workspace | null {
  * Decides the workspace for a forwarded email, matching on the address that
  * sent it to us — the person forwarding, not the GC quoted inside.
  *
- * With no rules configured everything goes to the live board, which is how
- * this behaved before sender routing existed.
+ * `stored` is each board's own approved list and is checked first; the
+ * environment is the fallback. Within either, an exact address beats a domain
+ * rule, so one mailbox on a shared domain can be pointed at the demo board.
+ *
+ * With nothing configured anywhere, everything goes to the live board — which
+ * is how this behaved before sender routing existed, and what a brand new
+ * deployment needs in order to receive its first email at all.
  */
-export function routeSender(from: string): SenderRoute {
+export function routeSender(from: string, stored: SenderRule[] = []): SenderRoute {
   const sender = bareAddress(from);
-  const rules = senderRules();
+  const env = senderRules();
 
-  if (rules.length === 0) {
-    return { ok: true, workspace: "live", sender, matched: "no sender rules configured" };
+  if (stored.length === 0 && env.length === 0) {
+    return { ok: true, workspace: "live", sender, matched: "no approved senders configured" };
   }
   if (!sender.includes("@")) {
     return { ok: false, sender, reason: "The message had no usable From address." };
@@ -127,13 +151,15 @@ export function routeSender(from: string): SenderRoute {
   const canonical = canonicalAddress(sender);
   const domain = `@${domainOf(canonical)}`;
 
-  // An exact address wins over a domain rule, so one mailbox on a shared
-  // domain can be pointed at the demo board.
-  const exact = rules.find((r) => r.pattern === canonical);
-  if (exact) return { ok: true, workspace: exact.workspace, sender, matched: exact.pattern };
+  for (const rules of [stored, env]) {
+    const exact = rules.find((r) => r.pattern === canonical);
+    if (exact) return { ok: true, workspace: exact.workspace, sender, matched: exact.pattern };
 
-  const byDomain = rules.find((r) => r.pattern === domain);
-  if (byDomain) return { ok: true, workspace: byDomain.workspace, sender, matched: byDomain.pattern };
+    const byDomain = rules.find((r) => r.pattern === domain);
+    if (byDomain) {
+      return { ok: true, workspace: byDomain.workspace, sender, matched: byDomain.pattern };
+    }
+  }
 
   const fallback = defaultWorkspace();
   if (fallback) {
@@ -143,6 +169,6 @@ export function routeSender(from: string): SenderRoute {
   return {
     ok: false,
     sender,
-    reason: `${sender} is not a recognised sender. Add it to BCC_INBOUND_SENDERS to let it post to a board.`,
+    reason: `${sender} is not an approved sender. Add it under Data & backup → Email intake to let it post to a board.`,
   };
 }

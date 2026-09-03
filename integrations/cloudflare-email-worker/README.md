@@ -38,13 +38,13 @@ deploy, an outage, or a refused sender.
    **Create address**: custom address `bids`, action **Send to a Worker**,
    worker `bid-intake`. Save.
 
-6. **Tell the app who you are.** On the app (Vercel → Settings →
-   Environment Variables), set `BCC_INBOUND_SENDERS` to the addresses allowed
-   to post, then redeploy:
+6. **Tell the app who you are.** Sign in and open **Data & backup → Email
+   intake**, then approve the mailboxes you forward from — your work address,
+   your phone's address, or your whole company as `@yourdomain.com`. No
+   redeploy, and each board keeps its own list.
 
-   ```
-   BCC_INBOUND_SENDERS=you@yourdomain.com, you@gmail.com, @yourdomain.com
-   ```
+   Until you approve someone, every sender lands on the live board. The first
+   approval is what starts turning strangers away.
 
 7. **Try it.** Forward a real bid invitation to `bids@yourdomain.com`. It shows
    up under **From your inbox** on the Command Center within a few seconds.
@@ -61,7 +61,11 @@ Worker logs exactly what the app said back:
 | `{"status":"update_noted",...}` | An addendum on a bid you already track. |
 | `{"status":"ignored",...}` | Read fine, but did not look like a bid invitation. |
 | `returned 401` | `BCC_TOKEN` does not match `BCC_INBOUND_SECRET`. |
-| `returned 403` | The sender is not in `BCC_INBOUND_SENDERS`. The response names the address to add. |
+| `returned 403` | The sender is not approved. The response names the address — add it under Data & backup → Email intake. |
 | `BCC_URL or BCC_TOKEN is not set` | Step 4 was skipped, or the secrets went on the wrong Worker. |
 
 With `FORWARD_TO` set, every one of those still leaves a copy in your inbox.
+
+If the app has `RESEND_API_KEY` configured you will also get a reply from Bid
+Command Center itself, threaded under the message you forwarded, saying what it
+made of it. That is usually a faster answer than the log stream.

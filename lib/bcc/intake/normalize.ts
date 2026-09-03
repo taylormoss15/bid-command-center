@@ -13,6 +13,8 @@ export interface NormalizedEmail {
   text: string;
   receivedAt: string;
   provider: string;
+  /** The original Message-ID, so a confirmation reply threads with the forward. */
+  messageId?: string | null;
 }
 
 type Payload = Record<string, unknown>;
@@ -114,6 +116,8 @@ export function normalizeEmail(payload: Payload): NormalizedEmail | null {
     text: text.slice(0, 24_000).trim(),
     receivedAt: firstString(data, ["Date", "date", "timestamp"]) || new Date().toISOString(),
     provider,
+    messageId:
+      firstString(data, ["MessageID", "message-id", "Message-Id", "messageId"]) || null,
   };
 }
 
