@@ -143,40 +143,108 @@ bid board is commercial, so this path means Pro at $20/month.
 
 # Path C — Email intake (optional, either path)
 
-Forward a bid invitation and it lands on the board as a card for review.
+Forward a bid invitation to one address and it appears on the board, already
+filled in, waiting for you to confirm it.
 
-1. Set `BCC_INBOUND_SECRET` (required — the endpoint refuses everything until it
-   exists) and `ANTHROPIC_API_KEY` (optional — without it, the app falls back to
-   plain text matching and labels every card low-confidence).
+## 1. Environment variables
 
-2. Point an inbound-email provider at:
+| Name | Required | What it does |
+|---|---|---|
+| `BCC_INBOUND_SECRET` | **yes** | Shared secret. Until it exists the endpoint refuses everything — it never accepts anonymous writes. |
+| `ANTHROPIC_API_KEY` | no | Reads the email properly. Without it the app falls back to plain text matching and labels every card low-confidence. |
+| `BCC_INBOUND_SENDERS` | no | Who may forward mail in, and to which board. Unset means every sender goes to the live board. |
+| `BCC_INBOUND_DEFAULT_WORKSPACE` | no | Where mail from an unrecognised sender goes. Unset means refuse it. |
+| `BCC_EXTRACTION_MODEL` | no | Defaults to `claude-opus-5`. |
 
-   ```
-   https://<your-domain>/api/bcc/inbound?token=<BCC_INBOUND_SECRET>
-   ```
+## 2. Who is allowed to forward
 
-   | Provider | Notes |
-   |---|---|
-   | **Cloudflare Email Routing** | Free. Route an address to a Worker that POSTs the message. |
-   | **Postmark** | Inbound stream, paid, the most reliable parsing. |
-   | **SendGrid Inbound Parse** | Free tier, needs an MX record on a subdomain. |
-   | **Mailgun Routes** | Free tier. |
+One address feeds every board, and the **From** address decides which one:
 
-   The endpoint recognises all of their payload shapes.
+```
+BCC_INBOUND_SENDERS=taylor@eliteroofing.com, s.taylormoss@gmail.com, @eliteroofing.com, sales@eliteroofing.com=demo
+```
 
-3. Confirm the wiring:
+- A bare address or an `@domain`; an exact address beats a domain rule, so one
+  mailbox on a shared domain can be pointed at the demo board.
+- `=live` or `=demo` picks the board. Live if you leave it off.
+- `+tag` suffixes are ignored, and so are dots in a Gmail address, so
+  `taylor+bids@gmail.com` still matches `taylor@gmail.com`.
+- Anyone else is refused, and the refusal names the address so you know what to
+  add.
 
-   ```bash
-   curl "https://<your-domain>/api/bcc/inbound?token=<secret>"
-   # {"status":"ready","extractor":"claude","model":"claude-opus-5"}
-   ```
+A word on what this is: a From header can be forged, so sender matching is
+**routing, not security**. `BCC_INBOUND_SECRET` is what guards the door. What
+the sender rules buy you is that a misconfigured provider, a newsletter, or a
+GC who found the address on a bid tab cannot quietly fill your board with junk.
 
-Forwarded mail never lands straight on the board — it appears under **From your
-inbox** on the Command Center and stays out of every total until accepted.
+Want GCs to be able to email the address directly? Set
+`BCC_INBOUND_DEFAULT_WORKSPACE=live` and unrecognised senders land on the live
+board instead of bouncing.
+
+## 3. Point a mail provider at it
+
+```
+https://<your-domain>/api/bcc/inbound?token=<BCC_INBOUND_SECRET>
+```
+
+| Provider | Notes |
+|---|---|
+| **Cloudflare Email Routing** | Free, and the obvious pick if your DNS is already there. Needs a small Worker — one is written for you in `integrations/cloudflare-email-worker/`, with step-by-step setup in its README. |
+| **Postmark** | Inbound stream, paid, the most reliable parsing. Points straight at the URL, no Worker. |
+| **SendGrid Inbound Parse** | Free tier, needs an MX record on a subdomain. Points straight at the URL. |
+| **Mailgun Routes** | Free tier. Points straight at the URL. |
+
+The endpoint recognises all of their payload shapes.
+
+## 4. Confirm the wiring
+
+```bash
+curl "https://<your-domain>/api/bcc/inbound?token=<secret>"
+```
+
+```json
+{
+  "status": "ready",
+  "extractor": "claude",
+  "model": "claude-opus-5",
+  "senders": ["taylor@eliteroofing.com → live", "@eliteroofing.com → live"],
+  "unrecognisedSenders": "refused",
+  "demoWorkspace": "available"
+}
+```
+
+Then forward a real invitation and watch **From your inbox** on the Command
+Center.
+
+## What happens to a forwarded email
+
+The sender picks the board. Then the app works out whether it already knows the
+job, because the whole model rests on one project per physical opportunity
+however many GCs bid it:
+
+| Situation | What you get |
+|---|---|
+| A job we have never seen | A new project in **Identified**, marked for review. It counts for nothing until you accept it. |
+| A job already on the board, from a GC not yet on it | A **second bid recipient** on the existing project — not a second project. Unique pipeline does not move; proposal activity does. |
+| A bid we already track (an addendum, a date change) | A note on that bid path, with the email attached and any disagreement spelled out: *"This email says bids are due Oct 14; the board says Oct 9."* |
+| The same email twice | Nothing. It is already waiting for you. |
+| A newsletter | Ignored, with a reason, so the provider stops retrying. |
+
+Two rules hold in every case. **Nothing an email says changes a project** — a
+moved bid date is reported, never applied, because that is your call. And the
+email body is treated as data, never as instructions: it goes to the model
+inside a delimited block with a fixed output schema, and there is nothing a
+forwarded message can say that will make this system act on it.
+
+The app also lines the extraction up with what you already have: it sends the
+names of GCs on file so a regular does not come back as a second spelling, and
+it recognises a GC by the email domain of anyone already on file — so an
+invitation from a new person at a company you know still lands under that
+company.
 
 **Cost:** roughly two to three cents per email at current Opus 5 pricing. Set
-`BCC_EXTRACTION_MODEL=claude-haiku-4-5` to trade some accuracy for about a fifth
-of that.
+`BCC_EXTRACTION_MODEL=claude-haiku-4-5` to trade some accuracy for about a
+fifth of that.
 
 ---
 
@@ -269,6 +337,9 @@ customer-facing that must not go down while you are on a roof on Vercel.
 | Container restarts in a loop | Health check failing. Check the app logs; the endpoint is `/api/bcc/health` and needs no auth. |
 | "Could not acquire the write lock" | Two writes collided. Retry; the lock clears itself after ten seconds. |
 | Email intake returns 401 | `BCC_INBOUND_SECRET` unset, or the `token` in the URL does not match it. |
+| Email intake returns 403 | The forwarding address is not in `BCC_INBOUND_SENDERS`. The response body names the address — add it, or set `BCC_INBOUND_DEFAULT_WORKSPACE`. |
+| A forwarded email went to the wrong board | Whichever rule in `BCC_INBOUND_SENDERS` matched the From address decided it. An exact address beats an `@domain` rule. |
+| A forwarded email created a duplicate project | The name and city did not look close enough to what is on the board. Merge by hand and it will match next time. |
 
 # Growing out of this
 

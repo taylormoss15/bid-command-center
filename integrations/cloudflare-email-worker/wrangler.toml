@@ -1,0 +1,23 @@
+# Deploying from your machine instead of pasting into the dashboard:
+#
+#   npm install -g wrangler
+#   wrangler login
+#   cd integrations/cloudflare-email-worker
+#   wrangler secret put BCC_URL      # https://yourdomain.com/api/bcc/inbound
+#   wrangler secret put BCC_TOKEN    # same value as BCC_INBOUND_SECRET
+#   wrangler deploy
+#
+# Then point the address at it: Cloudflare dashboard → your domain → Email →
+# Email Routing → Routing rules → bids@ → Send to a Worker → bid-intake.
+
+name = "bid-intake"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# A verified destination address to copy every message to, so nothing is lost
+# if the app is mid-deploy. Optional but recommended.
+# [vars]
+# FORWARD_TO = "you@yourdomain.com"
+
+# No email binding is needed: message.forward() may target any address you
+# have already verified as a destination in Email Routing.

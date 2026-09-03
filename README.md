@@ -145,24 +145,43 @@ the wiring without waiting until tomorrow.
 ### Email intake
 
 Forward a bid invitation to the address your mail provider points at
-`POST /api/bcc/inbound?token=…` and it comes back as a project card on the Command
-Center — name, GC, contact, location, bid date and time, materials, scope flags,
-square footage, and a value when the email states one.
+`POST /api/bcc/inbound?token=…` and it comes back on the Command Center — name, GC,
+contact, location, bid date and time, materials, scope flags, square footage, and a
+value when the email states one.
 
-Three rules make this safe to leave switched on:
+**Who sent it picks the board.** One address feeds every workspace; the From address
+decides which one, via `BCC_INBOUND_SENDERS` (an address or an `@domain`, optionally
+`=live` or `=demo`). Anyone unrecognised is refused, and the refusal names the address
+so you know what to add. A From header is forgeable, so this is routing, not security —
+`BCC_INBOUND_SECRET` is what guards the door.
 
-- **Nothing lands on the board unreviewed.** Every arrival is a draft in *Identified*
-  with `needsReview` set. It is excluded from pipeline totals, the board, the table,
-  the follow-up queue, and GC history until you press **Add to board**.
+**What it already knows, it reuses.** The extractor is handed the GCs on file so a
+regular does not come back as a second spelling, and a GC is recognised by the email
+domain of anyone already on file — an invitation from a new person at a company you
+know lands under that company. Most importantly, an invitation for a job already on
+the board becomes a **second bid recipient**, never a second project: four GCs on one
+$350K job is $1.4M of proposal activity and still $350K of unique pipeline, and the
+intake will not break that rule behind your back.
+
+Four rules make this safe to leave switched on:
+
+- **Nothing lands on the board unreviewed.** A new project is a draft in *Identified*
+  with `needsReview` set — excluded from pipeline totals, the board, the table, the
+  follow-up queue, and GC history until you press **Add to board**. A new bid path on
+  an existing project asks for a look without touching that project's numbers.
+- **Nothing an email says changes a project.** A moved bid date is reported next to
+  what the board currently says — *"This email says bids are due Oct 14; the board says
+  Oct 9"* — and applied only when you decide to.
 - **The email is data, never instructions.** It is passed to the model inside a
   delimited block with a fixed output schema. There is nothing a forwarded message can
   say that changes what the system does with it.
-- **It says what it is unsure about.** Every card shows a confidence level and the
+- **It says what it is unsure about.** Every arrival shows a confidence level and the
   extractor's own list of guesses, alongside the original message.
 
 Set `ANTHROPIC_API_KEY` for the model-based reader. Without one it falls back to text
 matching — good enough for dates, dollar amounts, and materials, and clearly labelled
-as such.
+as such. Cloudflare Email Routing users: a ready-made Worker and its setup steps are in
+`integrations/cloudflare-email-worker/`.
 
 ### Pipeline tabs
 

@@ -47,10 +47,12 @@ export function AppShell({
 
   useEffect(() => setNavOpen(false), [pathname]);
 
-  /** Forwarded emails waiting to be confirmed. */
+  /** Forwarded emails waiting to be confirmed — new jobs and new bid paths alike. */
   const inboxCount = useMemo(
-    () => (db?.projects ?? []).filter((p) => p.needsReview).length,
-    [db?.projects],
+    () =>
+      (db?.projects ?? []).filter((p) => p.needsReview).length +
+      (db?.recipients ?? []).filter((r) => r.needsReview).length,
+    [db?.projects, db?.recipients],
   );
 
   /** Overdue + due-today across active work — the only number worth a badge. */

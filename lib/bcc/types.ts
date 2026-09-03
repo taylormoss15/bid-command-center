@@ -106,6 +106,15 @@ export interface BidRecipient {
   signal?: Signal | null;
   feedback?: string;
   revisions: BidRevision[];
+
+  /**
+   * Set when this bid path arrived by forwarded email — either a new GC on a
+   * project already on the board, or an update to one. Unlike a project-level
+   * intake it never suppresses totals, because a recipient carries no value of
+   * its own; it only asks Taylor to look.
+   */
+  intake?: Intake | null;
+  needsReview?: boolean;
 }
 
 export interface Contract {
@@ -142,6 +151,12 @@ export interface Intake {
   confidence: "high" | "medium" | "low";
   /** What the extractor was unsure about — shown to the reviewer verbatim. */
   uncertainties: string[];
+  /**
+   * Where this email disagrees with what the board already says — a moved bid
+   * date, a different value. Recorded, never applied: an email does not get to
+   * change a project.
+   */
+  differences?: string[];
   reviewedAt?: string | null;
 }
 
