@@ -42,6 +42,10 @@ export async function PATCH(
       const org = db.organizations.find((o) => o.id === recipient.organizationId);
       if (project) {
         project.lastActivityDate = newRevision.date;
+        // The project's submitted date is the first time anything went out.
+        if (!project.bidSubmittedDate || newRevision.date < project.bidSubmittedDate) {
+          project.bidSubmittedDate = newRevision.date;
+        }
         db.activities.push({
           id: newId("act"),
           projectId: project.id,

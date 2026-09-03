@@ -89,6 +89,7 @@ export function ProjectPanel() {
     updateProject,
     deleteProject,
     openOutcomeCapture,
+    openRecordBid,
     toast,
   } = useData();
   const orgs = useOrgIndex();
@@ -210,6 +211,9 @@ export function ProjectPanel() {
               <IconEdit size={13} />
               Edit
             </Button>
+            <Button onClick={() => openRecordBid({ projectId: project.id })}>
+              Record bid
+            </Button>
             <Button variant="volt" onClick={() => openLog({ projectId: project.id })}>
               Log follow-up
             </Button>
@@ -244,7 +248,9 @@ export function ProjectPanel() {
         {tab === "GCs & Contacts" ? (
           <RecipientsTab projectId={project.id} recipients={recipients} />
         ) : null}
-        {tab === "Bid History" ? <BidHistoryTab recipients={recipients} orgs={orgs} /> : null}
+        {tab === "Bid History" ? (
+          <BidHistoryTab projectId={project.id} recipients={recipients} orgs={orgs} />
+        ) : null}
         {tab === "Activity" ? <ActivityTab activities={activities} /> : null}
         {tab === "Financials" ? <FinancialsTab project={project} recipients={recipients} /> : null}
         {tab === "Schedule" ? <ScheduleTab project={project} /> : null}
@@ -460,7 +466,8 @@ function RecipientsTab({
   projectId: string;
   recipients: BidRecipient[];
 }) {
-  const { db, updateRecipient, createRecipient, deleteRecipient, openLog, toast } = useData();
+  const { db, updateRecipient, createRecipient, deleteRecipient, openLog, openRecordBid, toast } =
+    useData();
   const orgs = useOrgIndex();
   const [adding, setAdding] = useState(false);
   const [newGc, setNewGc] = useState("");
@@ -516,9 +523,15 @@ function RecipientsTab({
                 <p className="tnum text-[15px] font-semibold text-ink">
                   {r.submittedAmount ? currency(r.submittedAmount) : "—"}
                 </p>
-                <p className="text-[11px] text-ink-faint">
-                  {r.submittedDate ? `Submitted ${formatDate(r.submittedDate)}` : "Not submitted"}
-                </p>
+                <button
+                  type="button"
+                  onClick={() => openRecordBid({ projectId, recipientId: r.id })}
+                  className="text-[11px] text-ink-muted underline decoration-line-strong underline-offset-2 transition hover:text-ink hover:decoration-ink"
+                >
+                  {r.submittedDate
+                    ? `Submitted ${formatDate(r.submittedDate)} · revise`
+                    : "Record what you submitted"}
+                </button>
               </div>
             </div>
 
@@ -671,19 +684,36 @@ function RecipientsTab({
 }
 
 function BidHistoryTab({
+  projectId,
   recipients,
   orgs,
 }: {
+  projectId: string;
   recipients: BidRecipient[];
   orgs: Map<string, string>;
 }) {
+  const { openRecordBid } = useData();
   const rows = recipients.flatMap((r) =>
     r.revisions.map((rev) => ({ rev, org: orgs.get(r.organizationId) ?? "GC" })),
   );
   if (rows.length === 0) {
-    return <EmptyState title="No submissions yet" body="Bid revisions appear here once a proposal has been issued." />;
+    return (
+      <EmptyState
+        title="Nothing submitted yet"
+        body="Record what actually went out and it appears here. That number drives raw proposal volume and the estimate-versus-contract comparison."
+        action={
+          <Button variant="primary" onClick={() => openRecordBid({ projectId })}>
+            Record what you submitted
+          </Button>
+        }
+      />
+    );
   }
   return (
+    <>
+    <div className="mb-3 flex justify-end">
+      <Button onClick={() => openRecordBid({ projectId })}>Record a submission</Button>
+    </div>
     <div className="overflow-hidden rounded-xl border border-line">
       <table className="w-full text-[13px]">
         <thead>
@@ -712,6 +742,7 @@ function BidHistoryTab({
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

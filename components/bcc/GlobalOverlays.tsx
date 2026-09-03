@@ -4,6 +4,7 @@ import { DataSettingsModal } from "./DataSettingsModal";
 import { EditProjectModal } from "./EditProjectModal";
 import { LogFollowUpModal } from "./LogFollowUpModal";
 import { OutcomeCaptureModal } from "./OutcomeCaptureModal";
+import { RecordBidModal } from "./RecordBidModal";
 import { ProjectPanel } from "./ProjectPanel";
 import { QuickAddModal } from "./QuickAddModal";
 
@@ -20,6 +21,7 @@ export function GlobalOverlays() {
       <EditProjectModal />
       <DataSettingsModal />
       <OutcomeCaptureModal />
+      <RecordBidModal />
     </>
   );
 }

@@ -122,6 +122,9 @@ interface DataContextValue {
   /** Set after a stage move that should record why, so the reason gets captured. */
   outcomeTarget: { projectId: string; stage: StageId } | null;
   openOutcomeCapture: (target: { projectId: string; stage: StageId } | null) => void;
+  /** Recording what was actually submitted, to one GC or to all of them. */
+  recordBidTarget: { projectId: string; recipientId?: string } | null;
+  openRecordBid: (target: { projectId: string; recipientId?: string } | null) => void;
   editProjectId: string | null;
   setEditProjectId: (id: string | null) => void;
 }
@@ -161,6 +164,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [dataSettingsOpen, setDataSettingsOpen] = useState(false);
   const [outcomeTarget, setOutcomeTarget] =
     useState<DataContextValue["outcomeTarget"]>(null);
+  const [recordBidTarget, setRecordBidTarget] =
+    useState<DataContextValue["recordBidTarget"]>(null);
   const [editProjectId, setEditProjectId] = useState<string | null>(null);
 
   const toastSeq = useRef(0);
@@ -400,6 +405,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDataSettingsOpen,
       outcomeTarget,
       openOutcomeCapture: setOutcomeTarget,
+      recordBidTarget,
+      openRecordBid: setRecordBidTarget,
       editProjectId,
       setEditProjectId,
     }),
@@ -409,7 +416,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       createProject, deleteProject, updateRecipient, createRecipient,
       deleteRecipient, logFollowUp, resetData, restoreBackup, toast, toasts,
       dismissToast, openProjectId, logTarget, quickAddOpen, dataSettingsOpen,
-      outcomeTarget, editProjectId,
+      outcomeTarget, recordBidTarget, editProjectId,
     ],
   );
 
