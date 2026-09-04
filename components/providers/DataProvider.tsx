@@ -130,6 +130,9 @@ interface DataContextValue {
   /** Recording what was actually submitted, to one GC or to all of them. */
   recordBidTarget: { projectId: string; recipientId?: string } | null;
   openRecordBid: (target: { projectId: string; recipientId?: string } | null) => void;
+  /** Booking the next commitment, without having to log a call first. */
+  followUpTarget: { projectId: string; recipientId?: string } | null;
+  openSetFollowUp: (target: { projectId: string; recipientId?: string } | null) => void;
   editProjectId: string | null;
   setEditProjectId: (id: string | null) => void;
 }
@@ -171,6 +174,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     useState<DataContextValue["outcomeTarget"]>(null);
   const [recordBidTarget, setRecordBidTarget] =
     useState<DataContextValue["recordBidTarget"]>(null);
+  const [followUpTarget, setFollowUpTarget] =
+    useState<DataContextValue["followUpTarget"]>(null);
   const [editProjectId, setEditProjectId] = useState<string | null>(null);
 
   const toastSeq = useRef(0);
@@ -422,6 +427,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       openOutcomeCapture: setOutcomeTarget,
       recordBidTarget,
       openRecordBid: setRecordBidTarget,
+      followUpTarget,
+      openSetFollowUp: setFollowUpTarget,
       editProjectId,
       setEditProjectId,
     }),
@@ -431,7 +438,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       createProject, deleteProject, updateRecipient, createRecipient,
       deleteRecipient, updateSettings, logFollowUp, resetData, restoreBackup, toast, toasts,
       dismissToast, openProjectId, logTarget, quickAddOpen, dataSettingsOpen,
-      outcomeTarget, recordBidTarget, editProjectId,
+      outcomeTarget, recordBidTarget, followUpTarget, editProjectId,
     ],
   );
 

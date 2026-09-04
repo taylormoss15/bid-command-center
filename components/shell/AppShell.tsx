@@ -47,6 +47,33 @@ export function AppShell({
 
   useEffect(() => setNavOpen(false), [pathname]);
 
+  // N for a new project.
+  //
+  // A bare letter rather than a modifier: Cmd/Ctrl+N is the browser's own
+  // new-window and cannot be intercepted. Bare letters are only safe while
+  // nothing is capturing typing, so this stands down inside any field and
+  // whenever a dialog is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== "n") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const el = e.target as HTMLElement | null;
+      if (
+        el?.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT"].includes(el?.tagName ?? "")
+      ) {
+        return;
+      }
+      if (document.querySelector('[role="dialog"]')) return;
+
+      e.preventDefault();
+      setQuickAddOpen(true);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [setQuickAddOpen]);
+
   /** Forwarded emails waiting to be confirmed — new jobs and new bid paths alike. */
   const inboxCount = useMemo(
     () =>
@@ -227,6 +254,9 @@ export function AppShell({
             >
               <IconPlus size={14} className="text-volt" />
               <span className="hidden sm:inline">New project</span>
+              <kbd className="hidden rounded border border-white/25 px-1.5 py-0.5 font-sans text-[10px] font-medium text-white/70 sm:block">
+                N
+              </kbd>
             </button>
           </div>
         </header>

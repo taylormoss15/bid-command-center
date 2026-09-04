@@ -10,6 +10,7 @@ import {
 } from "@/components/providers/DataProvider";
 import { Field, Input, Select } from "@/components/ui/Field";
 import {
+  IconCalendar,
   IconChat,
   IconClock,
   IconEdit,
@@ -90,6 +91,7 @@ export function ProjectPanel() {
     deleteProject,
     openOutcomeCapture,
     openRecordBid,
+    openSetFollowUp,
     toast,
   } = useData();
   const orgs = useOrgIndex();
@@ -214,8 +216,12 @@ export function ProjectPanel() {
             <Button onClick={() => openRecordBid({ projectId: project.id })}>
               Record bid
             </Button>
-            <Button variant="volt" onClick={() => openLog({ projectId: project.id })}>
+            <Button onClick={() => openLog({ projectId: project.id })}>
               Log follow-up
+            </Button>
+            <Button variant="volt" onClick={() => openSetFollowUp({ projectId: project.id })}>
+              <IconCalendar size={13} />
+              Set follow-up
             </Button>
           </div>
         </div>
