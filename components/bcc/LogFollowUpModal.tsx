@@ -7,6 +7,8 @@ import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Overlay";
 import { Button, cx } from "@/components/ui/primitives";
 import { probabilityOf } from "@/lib/bcc/calc";
+import { CadenceMessage } from "@/components/bcc/CadenceMessage";
+import { nextInCadence } from "@/lib/bcc/cadence";
 import { addDays, formatDate, todayISO } from "@/lib/bcc/format";
 import { STAGES, STAGE_MAP } from "@/lib/bcc/stages";
 import { CONTACT_METHODS, FOLLOW_UP_TYPES, FOLLOW_UP_TYPE_MAP, SIGNALS } from "@/lib/bcc/taxonomy";
@@ -62,10 +64,12 @@ export function LogFollowUpModal() {
     setSignal(rec?.signal ?? "neutral");
     setStage("");
     setProbability("");
-    setNextDate(addDays(todayISO(), 7));
-    setNextType(rec?.nextFollowUpType ?? "bid_leveling");
+    // Where the cadence goes after this touch, rather than a flat week out.
+    const plan = nextInCadence(project, rec, db?.activities ?? [], todayISO());
+    setNextDate(plan.date);
+    setNextType(plan.type);
     setWaiting("");
-  }, [logTarget, project, recipients]);
+  }, [logTarget, project, recipients, db?.activities]);
 
   if (!logTarget || !project) return null;
 

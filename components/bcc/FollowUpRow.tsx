@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/primitives";
 import { followUpHealth, nextFollowUp } from "@/lib/bcc/calc";
 import { addDays, currency, formatDate, relativeDays, todayISO } from "@/lib/bcc/format";
+import { CadenceMessage } from "@/components/bcc/CadenceMessage";
 import { suggestedReason } from "@/lib/bcc/suggest";
 import type { BidRecipient, Project } from "@/lib/bcc/types";
 
@@ -41,6 +42,7 @@ export function FollowUpRow({
   const { today, openProject, openLog, updateRecipient, toast } = useData();
   const orgs = useOrgIndex();
   const [rescheduling, setRescheduling] = useState(false);
+  const [showMessage, setShowMessage] = useState(false);
 
   const health = followUpHealth(project, recipients, today);
   const next = nextFollowUp(recipients);
@@ -68,7 +70,7 @@ export function FollowUpRow({
   return (
     <div
       className={cx(
-        "group relative flex flex-col gap-2 border-b border-line-faint px-3 py-3 transition last:border-0 hover:bg-canvas sm:flex-row sm:items-center sm:gap-3",
+        "group relative flex flex-col gap-2 border-b border-line-faint px-3 py-3 transition last:border-0 hover:bg-canvas sm:flex-row sm:flex-wrap sm:items-center sm:gap-3",
         health === "overdue" && "bg-danger-tint/30",
       )}
     >
@@ -149,6 +151,9 @@ export function FollowUpRow({
               <IconCalendar size={14} />
             </IconButton>
             <TrelloLink url={project.trelloUrl} compact />
+            <Button size="xs" onClick={() => setShowMessage((v) => !v)} disabled={!recipient}>
+              {showMessage ? "Hide" : "Message"}
+            </Button>
             <Button
               size="xs"
               onClick={() => openLog({ projectId: project.id, recipientId: recipient?.id })}
@@ -159,6 +164,12 @@ export function FollowUpRow({
           </>
         )}
       </div>
+
+      {showMessage && recipient ? (
+        <div className="mt-2.5 w-full">
+          <CadenceMessage project={project} recipient={recipient} />
+        </div>
+      ) : null}
     </div>
   );
 }

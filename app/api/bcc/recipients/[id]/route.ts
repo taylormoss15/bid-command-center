@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { currentWorkspace } from "@/lib/bcc/auth";
+import { nextInCadence } from "@/lib/bcc/cadence";
+import { todayISO } from "@/lib/bcc/format";
 import { mutate, newId } from "@/lib/bcc/store";
 import type { BidRecipient } from "@/lib/bcc/types";
 
@@ -59,6 +61,25 @@ export async function PATCH(
           note: newRevision.note,
           author: "Taylor Moss",
         });
+
+        // A submitted bid with no next action is the commonest way a job goes
+        // quiet, so book the first follow-up now. Only when nothing is already
+        // booked — a date Taylor set by hand always wins.
+        if (!recipient.nextFollowUpDate && !rest.nextFollowUpDate) {
+          const plan = nextInCadence(project, recipient, db.activities, todayISO());
+          recipient.nextFollowUpDate = plan.date;
+          recipient.nextFollowUpType = plan.type;
+          db.activities.push({
+            id: newId("act"),
+            projectId: project.id,
+            recipientId: recipient.id,
+            at: new Date().toISOString(),
+            kind: "system",
+            summary: `First follow-up booked for ${plan.date}`,
+            note: plan.why,
+            author: "Cadence",
+          });
+        }
       }
     }
     return true;

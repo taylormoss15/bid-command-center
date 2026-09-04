@@ -94,6 +94,52 @@ sender is not approved and the response names the address.
 
 ---
 
+## Keyboard
+
+| Key | Does |
+|---|---|
+| `N` | New project |
+| `F` | Follow-up queue |
+| `⌘K` | Search projects, GCs, cities |
+
+Bare letters, because ⌘N and ⌘T belong to the browser. They stand down inside
+any field and whenever a dialog is open.
+
+## The follow-up cadence
+
+Three messages after a bid goes out, then work to the GC's own date:
+
+| | When | For |
+|---|---|---|
+| 1 | 6 business days after the bid was due | Confirm they have everything. Do not ask whether you won. |
+| 2 | 8 business days later | Have you started levelling? |
+| 3 | 10 business days later | **Ask them for a date to circle back**, then honour it. |
+
+After the third, the app stops proposing dates — use the one they gave you. Set
+it as the next follow-up with a note in *Waiting on*, and the board leaves them
+alone until then.
+
+Counted in business days and rolled off weekends. The clock starts at the bid
+due date, not the day you submitted, so bidding early never means chasing
+early. A revision sent *after* the due date does move the clock.
+
+Exceptions the app handles on its own:
+
+- **Engaged** (Active follow-up, Shortlisted, Apparent low) — the script is set
+  aside. Answer them immediately; chase about weekly if it goes quiet.
+- **Awarded but unsigned** (Verbal award, Contract received) — chase the
+  contract, not the bid.
+- **Not yet submitted** — no cadence. There is nothing to follow up on.
+
+The message for whichever step a bid is on is on the **Message** button in the
+follow-up queue and inside Set follow-up, ready to copy. GCs marked *strong* or
+*preferred* get the shorter, more familiar wording.
+
+Recording a submitted bid books the first follow-up automatically, but only
+when nothing is already booked — a date set by hand always wins.
+
+---
+
 ## Still to do
 
 - [ ] `BCC_APP_URL` set on Vercel, then redeploy

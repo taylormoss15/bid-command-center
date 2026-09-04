@@ -83,6 +83,38 @@ export function addDays(iso: string, days: number): string {
   return toISODate(d);
 }
 
+/**
+ * Business days forward, skipping weekends. Follow-up cadences are counted in
+ * working days because that is how a GC's week actually runs — a bid due
+ * Friday should not get its first chase on Sunday.
+ *
+ * Holidays are not modelled. Being a day out on a courtesy call costs nothing,
+ * and a hardcoded holiday table goes stale.
+ */
+export function addBusinessDays(iso: string, days: number): string {
+  const date = parseDate(iso);
+  if (!date) return iso;
+
+  let remaining = Math.abs(days);
+  const step = days < 0 ? -1 : 1;
+  while (remaining > 0) {
+    date.setUTCDate(date.getUTCDate() + step);
+    const day = date.getUTCDay();
+    if (day !== 0 && day !== 6) remaining -= 1;
+  }
+  return toISODate(date);
+}
+
+/** Nudges a weekend date onto the following Monday. */
+export function toWeekday(iso: string): string {
+  const date = parseDate(iso);
+  if (!date) return iso;
+  while (date.getUTCDay() === 0 || date.getUTCDay() === 6) {
+    date.setUTCDate(date.getUTCDate() + 1);
+  }
+  return toISODate(date);
+}
+
 export function formatDate(
   value: string | null | undefined,
   style: "short" | "medium" | "long" = "medium",

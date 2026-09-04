@@ -6,6 +6,8 @@ import { useData, useOrgIndex } from "@/components/providers/DataProvider";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Overlay";
 import { Button, cx } from "@/components/ui/primitives";
+import { CadenceMessage } from "@/components/bcc/CadenceMessage";
+import { nextInCadence } from "@/lib/bcc/cadence";
 import { addDays, formatDate, todayISO } from "@/lib/bcc/format";
 import { FOLLOW_UP_TYPES } from "@/lib/bcc/taxonomy";
 import type { FollowUpType } from "@/lib/bcc/types";
@@ -54,15 +56,21 @@ export function SetFollowUpModal() {
       "";
     setRecipientId(preferred);
     const rec = recipients.find((r) => r.id === preferred);
-    setDate(rec?.nextFollowUpDate ?? addDays(todayISO(), 7));
-    setType(rec?.nextFollowUpType ?? "bid_leveling");
+    // Nothing booked yet? Propose where the cadence says this bid path is up
+    // to, rather than a flat week from today.
+    const plan = nextInCadence(project, rec, db?.activities ?? [], todayISO());
+    setDate(rec?.nextFollowUpDate ?? plan.date);
+    setType(rec?.nextFollowUpType ?? plan.type);
     setApplyToAll(false);
-  }, [followUpTarget, project, recipients]);
+  }, [followUpTarget, project, recipients, db?.activities]);
 
   if (!followUpTarget || !project) return null;
 
   const recipient = recipients.find((r) => r.id === recipientId) ?? null;
   const targets = applyToAll ? recipients : recipient ? [recipient] : [];
+  const plan = recipients.length > 0
+    ? nextInCadence(project, recipient, db?.activities ?? [], today)
+    : null;
   const orgName = (id: string) => orgs.get(id) ?? "GC";
 
   const save = async () => {
@@ -158,6 +166,32 @@ export function SetFollowUpModal() {
           </Field>
         ) : null}
 
+        {plan ? (
+          <button
+            type="button"
+            onClick={() => {
+              setDate(plan.date);
+              setType(plan.type);
+            }}
+            className={cx(
+              "flex w-full items-start gap-2.5 rounded-xl border p-3 text-left transition",
+              date === plan.date
+                ? "border-volt-deep/40 bg-volt-tint"
+                : "border-line hover:border-line-strong hover:bg-canvas",
+            )}
+          >
+            <span className="min-w-0">
+              <span className="block text-[13px] font-medium text-ink">
+                Cadence says {formatDate(plan.date)}
+                {plan.step ? ` — ${plan.step.label.toLowerCase()}` : ""}
+              </span>
+              <span className="mt-0.5 block text-[11.5px] leading-relaxed text-ink-muted">
+                {plan.why}
+              </span>
+            </span>
+          </button>
+        ) : null}
+
         <Field label="Follow up on" hint={date ? relativeHint(today, date) : undefined}>
           <div className="mb-2 flex flex-wrap gap-1.5">
             {QUICK_DATES.map((q) => {
@@ -209,6 +243,15 @@ export function SetFollowUpModal() {
               </span>
             </span>
           </label>
+        ) : null}
+
+        {recipient ? (
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-faint">
+              What to send
+            </p>
+            <CadenceMessage project={project} recipient={recipient} />
+          </div>
         ) : null}
       </div>
     </Modal>

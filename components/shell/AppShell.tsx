@@ -26,7 +26,7 @@ const NAV = [
   { href: "/", label: "Command Center", icon: IconGauge, inbox: true },
   { href: "/board", label: "Bid Board", icon: IconBoard },
   { href: "/projects", label: "Projects", icon: IconTable },
-  { href: "/followups", label: "Follow-ups", icon: IconBell, badge: true },
+  { href: "/followups", label: "Follow-ups", icon: IconBell, badge: true, key: "F" },
   { href: "/forecast", label: "Install Forecast", icon: IconTimeline },
   { href: "/clients", label: "Clients & GCs", icon: IconBuilding },
   { href: "/analytics", label: "Analytics", icon: IconChart },
@@ -47,7 +47,7 @@ export function AppShell({
 
   useEffect(() => setNavOpen(false), [pathname]);
 
-  // N for a new project.
+  // F for the follow-up queue, N for a new project.
   //
   // A bare letter rather than a modifier: Cmd/Ctrl+N is the browser's own
   // new-window and cannot be intercepted. Bare letters are only safe while
@@ -55,7 +55,8 @@ export function AppShell({
   // whenever a dialog is open.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== "n") return;
+      const key = e.key.toLowerCase();
+      if (key !== "n" && key !== "f") return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       const el = e.target as HTMLElement | null;
@@ -68,11 +69,12 @@ export function AppShell({
       if (document.querySelector('[role="dialog"]')) return;
 
       e.preventDefault();
-      setQuickAddOpen(true);
+      if (key === "f") router.push("/followups");
+      else setQuickAddOpen(true);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [setQuickAddOpen]);
+  }, [setQuickAddOpen, router]);
 
   /** Forwarded emails waiting to be confirmed — new jobs and new bid paths alike. */
   const inboxCount = useMemo(
@@ -136,6 +138,11 @@ export function AppShell({
               >
                 {inboxCount}
               </span>
+            ) : null}
+            {item.key ? (
+              <kbd className="rounded border border-white/20 px-1.5 py-0.5 font-sans text-[10px] font-medium text-white/40 group-hover:text-white/70">
+                {item.key}
+              </kbd>
             ) : null}
           </Link>
         );
