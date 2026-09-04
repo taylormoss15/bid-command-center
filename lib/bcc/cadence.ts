@@ -9,7 +9,7 @@ import type { Activity, BidRecipient, FollowUpType, Organization, Project } from
 // waiting on the owner, or negotiating the prime contract — consistent without
 // becoming the roofer asking for an update every four days.
 //
-//   bid due → 1 week → 2 weeks → ask when to come back → their timeline
+//   bid due → 1½ weeks → 3 days → 1 week → ask when to come back → their timeline
 //
 // The third message is the one that matters. It stops asking "any news?" and
 // asks them to name a date, which turns an open-ended chase into a booking and
@@ -34,7 +34,18 @@ export interface CadenceStep {
   /** Business days after the previous touch — or after the bid due date, for step 1. */
   businessDays: number;
   subject: (ctx: MessageContext) => string;
+  /** Taylor's wording, verbatim. Not paraphrased, not regenerated. */
   body: (ctx: MessageContext) => string;
+}
+
+/**
+ * The one-liner for a GC you already know. Offered next to any step rather
+ * than swapped in automatically — which of the two to send is a read on the
+ * relationship, and that is not a call the software should make.
+ */
+export function shortVersion(ctx: MessageContext): string {
+  const name = ctx.contactName ? ctx.contactName.split(" ")[0] : "there";
+  return `Hey ${name} — any movement on ${ctx.projectName}? If it's still a ways out, just give me a date to circle back and I'll get out of your hair until then.`;
 }
 
 function greeting(ctx: MessageContext): string {
@@ -66,56 +77,38 @@ export const CADENCE: CadenceStep[] = [
     label: "Second follow-up",
     goal: "Now it is fair to ask where things stand.",
     type: "bid_leveling",
-    businessDays: 8,
+    businessDays: 3,
     subject: (c) => `Roofing package — ${c.projectName}`,
     body: (c) =>
-      c.familiar
-        ? [
-            greeting(c),
-            "",
-            `Any movement on ${c.projectName}? If you're still levelling I can hold tight — just let me know if anything needs tightening up on our end.`,
-            "",
-            "Thanks,",
-            "Taylor",
-          ].join("\n")
-        : [
-            greeting(c),
-            "",
-            `Wanted to check back in on the roofing package for ${c.projectName}. Have you started leveling the roofing bids yet?`,
-            "",
-            "If you have any questions on our scope or there's anything we need to tighten up to make sure we're apples-to-apples, let me know.",
-            "",
-            "Thanks,",
-            "Taylor",
-          ].join("\n"),
+      [
+        greeting(c),
+        "",
+        `Wanted to check back in on the roofing package for ${c.projectName}. Have you started leveling the roofing bids yet?`,
+        "",
+        "If you have any questions on our scope or there's anything we need to tighten up to make sure we're apples-to-apples, let me know.",
+        "",
+        "Thanks,",
+        "Taylor",
+      ].join("\n"),
   },
   {
     step: 3,
     label: "Ask for a date",
     goal: "Stop chasing. Get them to name when to come back, then honour it.",
     type: "award_timing",
-    businessDays: 10,
+    businessDays: 5,
     subject: (c) => `${c.projectName} — when should I circle back?`,
     body: (c) =>
-      c.familiar
-        ? [
-            greeting(c),
-            "",
-            `Any movement on ${c.projectName}? If it's still a ways out, just give me a date to circle back and I'll get out of your hair until then.`,
-            "",
-            "Thanks,",
-            "Taylor",
-          ].join("\n")
-        : [
-            greeting(c),
-            "",
-            `Checking back on ${c.projectName}. I know these larger projects can take a while to work through.`,
-            "",
-            "If the roofing award is still a ways out, no problem at all. Do you have a rough date you'd like me to circle back with you? I'll make a note on my end and follow up then.",
-            "",
-            "Thanks,",
-            "Taylor",
-          ].join("\n"),
+      [
+        greeting(c),
+        "",
+        `Checking back on ${c.projectName}. I know these larger projects can take a while to work through.`,
+        "",
+        "If the roofing award is still a ways out, no problem at all. Do you have a rough date you'd like me to circle back with you? I'll make a note on my end and follow up then.",
+        "",
+        "Thanks,",
+        "Taylor",
+      ].join("\n"),
   },
 ];
 
@@ -126,6 +119,12 @@ export const CADENCE: CadenceStep[] = [
  * quiet.
  */
 export const ENGAGED_BUSINESS_DAYS = 6;
+
+/**
+ * Once the three messages are spent and no date was ever offered, come back on
+ * a slow rhythm rather than stopping altogether — the midpoint of 5–10.
+ */
+export const AFTER_CADENCE_BUSINESS_DAYS = 7;
 
 /** Where the three scripted messages actually make sense. */
 const CADENCE_STAGE = "submitted";
@@ -271,9 +270,9 @@ export function nextInCadence(
   if (done >= CADENCE.length) {
     return {
       step: null,
-      date: toWeekday(addBusinessDays(today, 15)),
+      date: toWeekday(addBusinessDays(today, AFTER_CADENCE_BUSINESS_DAYS)),
       type: "award_timing",
-      why: "Three messages sent. Do not keep guessing — use the date they gave you, or ask for one.",
+      why: "Three messages sent. Do not keep guessing — use the date they gave you. If they never gave one, back in a week or two.",
       engaged: false,
     };
   }
@@ -293,13 +292,19 @@ export function messageFor(
   project: Project,
   recipient: BidRecipient | null | undefined,
   organization: Organization | null | undefined,
-): { subject: string; body: string } | null {
+): { subject: string; body: string; short: string; familiar: boolean } | null {
   if (!plan.step) return null;
+  const familiar =
+    organization?.relationship === "strong" || organization?.relationship === "preferred";
   const ctx: MessageContext = {
     contactName: recipient?.contactName,
     projectName: project.name,
-    familiar:
-      organization?.relationship === "strong" || organization?.relationship === "preferred",
+    familiar,
   };
-  return { subject: plan.step.subject(ctx), body: plan.step.body(ctx) };
+  return {
+    subject: plan.step.subject(ctx),
+    body: plan.step.body(ctx),
+    short: shortVersion(ctx),
+    familiar,
+  };
 }

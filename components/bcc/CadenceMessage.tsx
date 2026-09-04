@@ -26,6 +26,7 @@ export function CadenceMessage({
 }) {
   const { db, today, toast } = useData();
   const [copied, setCopied] = useState(false);
+  const [short, setShort] = useState(false);
 
   const plan = nextInCadence(project, recipient, db?.activities ?? [], today);
   const org = recipient
@@ -46,9 +47,11 @@ export function CadenceMessage({
     );
   }
 
+  const text = short ? message.short : message.body;
+
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(message.body);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast("Message copied", { detail: plan.step?.label });
@@ -67,8 +70,17 @@ export function CadenceMessage({
           <span className="block text-[12px] font-medium text-ink">
             {plan.step?.label}
           </span>
-          <span className="block truncate text-[11px] text-ink-muted">{plan.step?.goal}</span>
+          <span className="block truncate text-[11px] text-ink-muted">
+            {short ? "Your one-liner for a GC you already know." : plan.step?.goal}
+          </span>
         </span>
+        <button
+          type="button"
+          onClick={() => setShort((v) => !v)}
+          className="shrink-0 rounded-md border border-line bg-paper px-2 py-1 text-[11.5px] text-ink-muted transition hover:border-ink hover:text-ink"
+        >
+          {short ? "Full" : "Short"}
+        </button>
         <button
           type="button"
           onClick={() => void copy()}
@@ -90,8 +102,13 @@ export function CadenceMessage({
         </button>
       </div>
       <pre className="max-h-52 overflow-auto whitespace-pre-wrap px-3 py-2.5 font-sans text-[12px] leading-relaxed text-ink-soft">
-        {message.body}
+        {text}
       </pre>
+      {message.familiar && !short ? (
+        <p className="border-t border-line bg-canvas px-3 py-1.5 text-[11px] text-ink-muted">
+          You know this GC well — the short version may fit better.
+        </p>
+      ) : null}
     </div>
   );
 }

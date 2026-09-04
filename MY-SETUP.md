@@ -112,12 +112,13 @@ Three messages after a bid goes out, then work to the GC's own date:
 | | When | For |
 |---|---|---|
 | 1 | 6 business days after the bid was due | Confirm they have everything. Do not ask whether you won. |
-| 2 | 8 business days later | Have you started levelling? |
-| 3 | 10 business days later | **Ask them for a date to circle back**, then honour it. |
+| 2 | 3 business days later | Have you started levelling? |
+| 3 | 5 business days later, about a week | **Ask them for a date to circle back**, then honour it. |
 
-After the third, the app stops proposing dates — use the one they gave you. Set
+After the third, the app stops proposing steps — use the date they gave you. Set
 it as the next follow-up with a note in *Waiting on*, and the board leaves them
-alone until then.
+alone until then. If a GC never gave one, it comes back every 7 business days
+rather than going silent.
 
 Counted in business days and rolled off weekends. The clock starts at the bid
 due date, not the day you submitted, so bidding early never means chasing
@@ -132,8 +133,10 @@ Exceptions the app handles on its own:
 - **Not yet submitted** — no cadence. There is nothing to follow up on.
 
 The message for whichever step a bid is on is on the **Message** button in the
-follow-up queue and inside Set follow-up, ready to copy. GCs marked *strong* or
-*preferred* get the shorter, more familiar wording.
+follow-up queue and inside Set follow-up, ready to copy. The three are yours
+word for word — a test fails the build if anything edits them. **Short** swaps
+in the one-liner for a GC you know well; on a *strong* or *preferred* GC the
+panel says so, but never substitutes it for you.
 
 Recording a submitted bid books the first follow-up automatically, but only
 when nothing is already booked — a date set by hand always wins.
